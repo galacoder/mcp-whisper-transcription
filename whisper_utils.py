@@ -73,9 +73,7 @@ class PerformanceReport:
             try:
                 speed = stat.processing_speed if stat.processing_speed > 0 else 0
                 words_per_sec = (
-                    (stat.words_transcribed / stat.video_duration)
-                    if stat.video_duration > 0
-                    else 0
+                    (stat.words_transcribed / stat.video_duration) if stat.video_duration > 0 else 0
                 )
                 chunks_timing = (
                     (stat.video_duration / stat.chunks_processed)
@@ -102,9 +100,7 @@ class PerformanceReport:
             if stat.peak_gpu_memory:
                 report.append(f"  • Peak GPU Memory: {stat.peak_gpu_memory:.2f}GB")
 
-            report.append(
-                f"  • Chunks: {stat.chunks_processed} ({chunks_timing:.1f}s per chunk)"
-            )
+            report.append(f"  • Chunks: {stat.chunks_processed} ({chunks_timing:.1f}s per chunk)")
 
         if self.stats:
             report.extend(
@@ -158,9 +154,7 @@ class OutputFormatter:
             for desc, path in saved_files:
                 print(f"  - {desc}: {path}")
 
-            self.logger.info(
-                f"Transcription saved in {len(saved_files)} format(s): {output_path}"
-            )
+            self.logger.info(f"Transcription saved in {len(saved_files)} format(s): {output_path}")
         else:
             self.logger.warning(f"No output formats were specified for {output_path}")
 
@@ -180,17 +174,12 @@ class OutputFormatter:
         self.logger.info(f"Saving TXT output to {txt_path}")
 
         with open(txt_path, "w", encoding="utf-8") as f:
-            f.write(
-                f"Transcription completed at: {datetime.now():%Y-%m-%d %H:%M:%S}\n\n"
-            )
+            f.write(f"Transcription completed at: {datetime.now():%Y-%m-%d %H:%M:%S}\n\n")
 
             # First check if we have populated chunks
             if isinstance(result, dict) and "chunks" in result and result["chunks"]:
                 chunks = result["chunks"]
-                if all(
-                    isinstance(c, dict) and "timestamp" in c and "text" in c
-                    for c in chunks
-                ):
+                if all(isinstance(c, dict) and "timestamp" in c and "text" in c for c in chunks):
                     # Process chunks with filtering and cleaning
                     for chunk in chunks:
                         # Skip unwanted content
@@ -223,10 +212,7 @@ class OutputFormatter:
             if isinstance(result, dict) and "text" in result and result["text"]:
                 # Clean and process the raw text
                 text = result["text"]
-                if any(
-                    line.strip().startswith("[") and "]:" in line
-                    for line in text.split("\n")
-                ):
+                if any(line.strip().startswith("[") and "]:" in line for line in text.split("\n")):
                     # Process timestamped text line by line
                     processed_lines = []
                     for line in text.split("\n"):
@@ -235,16 +221,12 @@ class OutputFormatter:
                             continue
 
                         # Clean lines with timestamps
-                        timestamp_match = re.match(
-                            r"(\[[\d\.]+s - [\d\.]+s\]:)(.*)", line
-                        )
+                        timestamp_match = re.match(r"(\[[\d\.]+s - [\d\.]+s\]:)(.*)", line)
                         if timestamp_match:
                             timestamp = timestamp_match.group(1)
                             content = timestamp_match.group(2).strip()
                             if content and not should_skip_content(content):
-                                processed_lines.append(
-                                    f"{timestamp} {clean_text_content(content)}"
-                                )
+                                processed_lines.append(f"{timestamp} {clean_text_content(content)}")
                         else:
                             # Include non-timestamp lines that aren't problematic
                             if line.strip():
@@ -260,9 +242,7 @@ class OutputFormatter:
 
                         # Compare content after timestamps to catch near-duplicates
                         if prev_line and ":" in prev_line and ":" in line:
-                            prev_content = (
-                                prev_line[prev_line.find(":") + 1 :].strip().lower()
-                            )
+                            prev_content = prev_line[prev_line.find(":") + 1 :].strip().lower()
                             current_content = line[line.find(":") + 1 :].strip().lower()
 
                             # Skip if content is nearly identical
@@ -303,9 +283,7 @@ class OutputFormatter:
             if isinstance(result, dict):
                 # Try to get text from chunks
                 if "chunks" in result and result["chunks"]:
-                    if all(
-                        isinstance(c, dict) and "text" in c for c in result["chunks"]
-                    ):
+                    if all(isinstance(c, dict) and "text" in c for c in result["chunks"]):
                         # Filter out problematic chunks
                         chunks = [
                             c
@@ -316,19 +294,13 @@ class OutputFormatter:
                         # Clean text for each chunk
                         for chunk in chunks:
                             if "text" in chunk:
-                                chunk["text"] = clean_text_content(
-                                    chunk["text"].strip()
-                                )
+                                chunk["text"] = clean_text_content(chunk["text"].strip())
 
-                        full_text = " ".join(
-                            chunk["text"] for chunk in chunks if chunk.get("text")
-                        )
+                        full_text = " ".join(chunk["text"] for chunk in chunks if chunk.get("text"))
 
                 # If no text from chunks, try segments
                 if not full_text and "segments" in result and result["segments"]:
-                    if all(
-                        isinstance(s, dict) and "text" in s for s in result["segments"]
-                    ):
+                    if all(isinstance(s, dict) and "text" in s for s in result["segments"]):
                         # Filter out problematic segments
                         chunks = [
                             s
@@ -339,9 +311,7 @@ class OutputFormatter:
                         # Clean text for each segment
                         for segment in chunks:
                             if "text" in segment:
-                                segment["text"] = clean_text_content(
-                                    segment["text"].strip()
-                                )
+                                segment["text"] = clean_text_content(segment["text"].strip())
 
                         full_text = " ".join(
                             segment["text"] for segment in chunks if segment.get("text")
@@ -402,9 +372,7 @@ class OutputFormatter:
 
                         # Calculate time gap based on format
                         if "timestamp" in chunk and "timestamp" in prev_chunk:
-                            time_gap = (
-                                chunk["timestamp"][0] - prev_chunk["timestamp"][1]
-                            )
+                            time_gap = chunk["timestamp"][0] - prev_chunk["timestamp"][1]
                         else:
                             time_gap = chunk.get("start", 0) - prev_chunk.get("end", 0)
 
@@ -412,9 +380,7 @@ class OutputFormatter:
                         # 1. Time gap > 2 seconds OR
                         # 2. Current chunk starts with capital letter and previous chunk ends with sentence-ending punctuation
                         if (time_gap > 2.0) or (
-                            text
-                            and text[0].isupper()
-                            and prev_text.endswith((".", "!", "?"))
+                            text and text[0].isupper() and prev_text.endswith((".", "!", "?"))
                         ):
                             if current_para:
                                 paragraphs.append(" ".join(current_para))
@@ -483,9 +449,7 @@ class OutputFormatter:
                     main_content = parts[0]
 
                 # Extract timestamp chunks
-                time_pattern = (
-                    r"\[(\d+\.\d+)s - (\d+\.\d+)s\]: (.*?)(?=\n\[\d+\.\d+s|\Z)"
-                )
+                time_pattern = r"\[(\d+\.\d+)s - (\d+\.\d+)s\]: (.*?)(?=\n\[\d+\.\d+s|\Z)"
                 matches = re.findall(time_pattern, main_content, re.DOTALL)
 
                 # Extract text entries (non-empty only)
@@ -507,7 +471,9 @@ class OutputFormatter:
                     start_time = current_time
                     end_time = start_time + duration
 
-                    srt_timestamp = f"{format_srt_timestamp(start_time)} --> {format_srt_timestamp(end_time)}"
+                    srt_timestamp = (
+                        f"{format_srt_timestamp(start_time)} --> {format_srt_timestamp(end_time)}"
+                    )
 
                     srt_content.append(f"{idx}\n{srt_timestamp}\n{text}\n\n")
                     current_time = end_time  # Move to the next timestamp
@@ -516,9 +482,7 @@ class OutputFormatter:
                 with open(srt_path, "w", encoding="utf-8") as f:
                     f.write("".join(srt_content))
 
-                self.logger.info(
-                    f"Generated SRT directly from txt transcript: {srt_path}"
-                )
+                self.logger.info(f"Generated SRT directly from txt transcript: {srt_path}")
                 return srt_path
 
             except Exception as e:
@@ -553,14 +517,9 @@ class OutputFormatter:
             elif "text" in result and result["text"]:
                 text = result["text"]
                 # If text contains timestamps, try to extract just the text content
-                if any(
-                    line.strip().startswith("[") and "]:" in line
-                    for line in text.split("\n")
-                ):
+                if any(line.strip().startswith("[") and "]:" in line for line in text.split("\n")):
                     for line in text.split("\n"):
-                        timestamp_match = re.match(
-                            r"\[([\d\.]+)s - ([\d\.]+)s\]:(.*)", line
-                        )
+                        timestamp_match = re.match(r"\[([\d\.]+)s - ([\d\.]+)s\]:(.*)", line)
                         if timestamp_match:
                             text_content = timestamp_match.group(3).strip()
                             if text_content and not should_skip_content(text_content):
@@ -583,7 +542,9 @@ class OutputFormatter:
                 start_time = current_time
                 end_time = start_time + duration
 
-                srt_timestamp = f"{format_srt_timestamp(start_time)} --> {format_srt_timestamp(end_time)}"
+                srt_timestamp = (
+                    f"{format_srt_timestamp(start_time)} --> {format_srt_timestamp(end_time)}"
+                )
 
                 srt_content.append(f"{idx}\n{srt_timestamp}\n{text}\n\n")
                 current_time = end_time  # Move to the next timestamp
@@ -594,9 +555,7 @@ class OutputFormatter:
         else:
             # Fallback: write empty SRT file with a message
             with open(srt_path, "w", encoding="utf-8") as f:
-                f.write(
-                    "1\n00:00:00,000 --> 00:00:05,000\nNo transcription available\n\n"
-                )
+                f.write("1\n00:00:00,000 --> 00:00:05,000\nNo transcription available\n\n")
 
         return srt_path
 
@@ -721,9 +680,7 @@ def cleanup_temp_files(temp_dir: Path, logger=None):
                             logger.debug(f"Removed temp file: {item}")
                     except Exception as e:
                         if logger:
-                            logger.warning(
-                                f"Could not remove temporary file {item}: {str(e)}"
-                            )
+                            logger.warning(f"Could not remove temporary file {item}: {str(e)}")
 
                 # Then recursively clean subdirectories
                 elif item.is_dir():
@@ -735,9 +692,7 @@ def cleanup_temp_files(temp_dir: Path, logger=None):
                             logger.debug(f"Removed temp directory: {item}")
                     except Exception as e:
                         if logger:
-                            logger.warning(
-                                f"Could not remove directory {item}: {str(e)}"
-                            )
+                            logger.warning(f"Could not remove directory {item}: {str(e)}")
 
         # Start the recursive cleaning
         clean_directory(temp_dir)
@@ -767,9 +722,7 @@ def setup_logger(logs_dir: Path, name="WhisperTranscriber"):
     # Create handlers
     c_handler = logging.StreamHandler()
     logs_dir.mkdir(exist_ok=True)
-    f_handler = logging.FileHandler(
-        logs_dir / f"transcription_{datetime.now():%Y%m%d_%H%M%S}.log"
-    )
+    f_handler = logging.FileHandler(logs_dir / f"transcription_{datetime.now():%Y%m%d_%H%M%S}.log")
 
     # Create formatter with timestamps
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")

@@ -15,7 +15,7 @@ async def example_transcription():
     """Example of using the MCP server to transcribe audio"""
     # TODO: This will be implemented after the MCP tools are created
     print("Example usage - to be implemented")
-    
+
     # Example workflow:
     # 1. Connect to MCP server
     # 2. Call transcribe_file tool

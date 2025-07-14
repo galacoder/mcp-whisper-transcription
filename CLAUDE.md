@@ -1,160 +1,236 @@
-# CLAUDE.md - Core Rules with Mandatory Workflows
+# CLAUDE.md - Concise Project Guide for Claude Code
 
-## 🚀 MANDATORY Workflow for ALL Tasks
+This file provides essential guidance for Claude Code (Sonnet & Opus 4) when working with this repository.
 
-### Before Starting ANY Task
-**ALWAYS execute these steps in order:**
+## 🏗️ Project Architecture
 
-1. **Search OpenMemory for Context**: 
-   ```bash
-   search_memory("task_context [task_id]")
-   search_memory("task_start_checklist")
-   ```
+MCP Server for Whisper Transcription:
+- **Main Server**: FastMCP-based server (`src/whisper_mcp_server.py`)
+- **Core Transcriber**: MLX Whisper implementation (`transcribe_mlx.py`)
+- **Utilities**: Audio processing, formatting (`whisper_utils.py`)
+- **Tests**: Comprehensive test suite (`test_*.py`)
 
-2. **Get Task Details**: 
-   ```bash
-   mcp__task-master__get_task --id="[task_id]" --projectRoot="/Users/sangle/Dev/action/projects/prox"
-   ```
+## 🧠 Memory Strategy
 
-3. **Set Task Status**: 
-   ```bash
-   mcp__task-master__set_task_status --id="[task_id]" --status="in-progress" --projectRoot="/Users/sangle/Dev/action/projects/prox"
-   ```
+### Dual-Memory System
+- **Local (OpenMemory)**: Project-specific knowledge, quick access
+- **Global (Graphiti)**: Cross-project patterns, reusable solutions
 
-4. **Create TodoWrite** for task breakdown
+### Quick Reference
+- **Local**: `search_memory("[query]")` - This project's specifics
+- **Global**: `mcp__graphiti-memory__search_memory_nodes --query="[pattern]" --group_ids=["global_patterns"]`
 
-5. **Search for Implementation Patterns**:
-   - Python: `search_memory("python_patterns")`
-   - React: `search_memory("react_patterns")`
-   - TDD: `search_memory("tdd_red_green_refactor")`
-   - Top-down: `search_memory("topdown_approach_examples")`
+### What Goes Where
+**Local Memory** (This Project):
+- MCP server patterns, FastMCP usage
+- Whisper transcription workflows
+- Audio processing techniques
+- Project-specific configurations
 
-### During Implementation (MANDATORY)
+**Global Memory** (Your Knowledge Base):
+- MCP protocol patterns
+- FastMCP architectural patterns
+- Audio/video processing patterns
+- Python async patterns
 
-1. **Follow TDD Methodology**:
-   - RED: Write failing test first
-   - GREEN: Minimal implementation to pass
-   - REFACTOR: Clean up while keeping tests green
-   - NEVER write implementation before tests
+## 🚀 Mandatory Task Workflows
 
-2. **Follow Top-Down Structure**:
-   - Start with main() function or primary component
-   - Add workflow comments (# 1. Step one, # 2. Step two)
-   - Implement supporting functions after main workflow
-   - Use type hints and proper error handling
+### Task Start Checklist
+ALWAYS execute in order:
+1. Check memories:
+   - Local: `search_memory("task_context [task_id]")`
+   - Global: `mcp__graphiti-memory__search_memory_nodes --query="[technology] patterns" --group_ids=["global_patterns"]`
+2. `mcp__task-master__get_task --id="[task_id]" --projectRoot="/Users/sangle/Dev/action/projects/mcp-servers/tools/mcp-whisper-transcription"`
+3. Check/create tag context with `mcp__task-master__list_tags`
+4. If unfamiliar tech:
+   - Use Context7: `mcp__context7__resolve-library-id --libraryName="[technology]"` then `mcp__context7__get-library-docs --context7CompatibleLibraryID="[resolved_id]"`
+   - Web search: `WebSearch --query="[topic] best practices implementation"`
+   - Save findings: `mcp__openmemory__add_memories --text="Research: [findings]"`
+5. If no subtasks: `mcp__task-master__analyze_project_complexity --ids="[task_id]"`
+6. `mcp__task-master__set_task_status --id="[task_id]" --status="in-progress"`
+7. Create TodoWrite for task breakdown
+8. Search implementation patterns in both memories
 
-3. **Store Decisions in Memory**:
-   ```bash
-   mcp__openmemory__add_memories --text="[architectural decision or pattern]"
-   ```
+### Task Completion Workflow
+Execute ALL before marking complete:
+1. `mcp__task-master__update_task --id="[task_id]" --prompt="COMPLETED: [summary]"`
+2. If research conducted: Save findings to memory `mcp__openmemory__add_memories --text="Task [task_id] research: [findings]"`
+3. Update memories:
+   - Local: `mcp__openmemory__add_memories --text="Task [task_id]: [specific_solution]"`
+   - Global (if reusable): `mcp__graphiti-memory__add_memory --name="Pattern: [concept]" --episode_body="[details]" --source="text" --group_id="global_patterns"`
+4. Run quality checks (see below)
+5. Create comprehensive commit
+6. `mcp__task-master__set_task_status --id="[task_id]" --status="completed"`
+7. Archive: `mcp__openmemory__add_memories --text="ARCHIVED: Task [task_id] complete"`
 
-### Upon Task Completion (MANDATORY)
+## 🔨 Essential Commands
 
-**Execute ALL steps before considering task complete:**
+### Build Commands
+```bash
+# Install dependencies
+poetry install
 
-1. **Update Task with Summary**:
-   ```bash
-   mcp__task-master__update_task --id="[task_id]" --prompt="COMPLETED: [detailed summary]" --projectRoot="/Users/sangle/Dev/action/projects/prox"
-   ```
+# Run server in development
+python -m src.whisper_mcp_server
 
-2. **Store Knowledge in OpenMemory**:
-   ```bash
-   mcp__openmemory__add_memories --text="Task [task_id] completed: [key learnings and implementation details]"
-   ```
+# Run tests
+poetry run pytest
+poetry run pytest -v  # verbose
+poetry run pytest test_resource_endpoints.py  # specific test
 
-3. **Run Quality Checks**:
-   ```bash
-   # Backend
-   cd apps/backend && poetry run pytest && poetry run flake8 src
-   
-   # Frontend
-   cd apps/consumer && pnpm test && pnpm lint
-   ```
+# Code quality
+poetry run black .  # format code
+poetry run flake8 src tests  # lint
+poetry run mypy src  # type checking
+```
 
-4. **Create Comprehensive Commit**:
-   ```bash
-   search_memory("commit_message_template")
-   # Then create commit following template
-   ```
+### Quality Checks
+```bash
+# All checks
+poetry run pytest && poetry run flake8 src tests && poetry run mypy src
 
-5. **Mark Task Complete**:
-   ```bash
-   mcp__task-master__set_task_status --id="[task_id]" --status="completed" --projectRoot="/Users/sangle/Dev/action/projects/prox"
-   ```
+# Before commit
+poetry run black . && poetry run pytest
+```
 
-6. **Archive Implementation**:
-   ```bash
-   mcp__openmemory__add_memories --text="ARCHIVED: Task [task_id] implementation complete with [files changed, patterns used, outcomes achieved]"
-   ```
+Always run before marking task complete.
 
-## 🧠 Memory Pattern Reference
+## 💡 Development Principles
 
-**Primary**: OpenMemory search commands  
-**Fallback**: Local patterns in `.claude/patterns.md`
+### Top-Down Approach
+All implementations:
+1. Main entry point first (main function or primary handler)
+2. Workflow comments (# 1. Step, # 2. Step)
+3. Break complexity into smaller functions
+4. Implementation details last
 
-| Pattern Type | Search Command | Fallback Section |
-|--------------|----------------|------------------|
-| Task workflow | `search_memory("task_start_checklist")` | TASK_START_CHECKLIST |
-| Top-down examples | `search_memory("topdown_approach_examples")` | TOPDOWN_APPROACH_EXAMPLES |
-| TDD workflow | `search_memory("tdd_red_green_refactor")` | TDD_RED_GREEN_REFACTOR_WORKFLOW |
-| Commit templates | `search_memory("commit_message_template")` | COMMIT_MESSAGE_TEMPLATE |
-| Python patterns | `search_memory("python_patterns")` | PYTHON_PATTERNS |
-| React patterns | `search_memory("react_patterns")` | REACT_PATTERNS |
-| Plugin architecture | `search_memory("plugin_system_patterns")` | PLUGIN_SYSTEM_PATTERNS |
+### TDD Workflow
+NEVER write implementation before tests:
+1. **RED**: Write failing test defining functionality
+2. **GREEN**: Minimal code to pass test
+3. **REFACTOR**: Clean up keeping tests green
 
-**If OpenMemory fails**: Read `.claude/patterns.md` for all pattern details
+### FastMCP Patterns
+```python
+# Tool definition
+@mcp.tool
+async def tool_name(param: str) -> dict:
+    """Tool description."""
+    # Implementation
 
-## 🔨 Build Commands
+# Resource definition
+@mcp.resource("protocol://path")
+async def resource_name() -> dict:
+    """Resource description."""
+    # Implementation
 
-### Monorepo
-- `pnpm dev` - Run all apps
-- `pnpm build` - Build all apps  
-- `pnpm lint` - Lint all code
-
-### Backend
-- `cd apps/backend && poetry run pytest` - Run tests
-- `cd apps/backend && poetry run pytest --cov` - With coverage
-- `cd apps/backend && poetry run flake8 src` - Lint Python code
-
-### Frontend
-- `cd apps/consumer && pnpm test` - Unit tests
-- `cd apps/consumer && pnpm test:e2e` - E2E tests
-- `cd apps/consumer && pnpm lint` - Lint TypeScript
-- `cd apps/consumer && pnpm type-check` - Type checking
+# Resource with parameters
+@mcp.resource("protocol://path/{param}")
+async def resource_with_param(param: str) -> dict:
+    """Resource with parameter."""
+    # Implementation
+```
 
 ## 📁 Project Structure
-- **Backend**: FastAPI + PostgreSQL (apps/backend/)
-- **Consumer**: Next.js 15 (apps/consumer/)
-- **Producer**: Next.js 14 (apps/producer/)
-- **Docs**: Mintlify (apps/docs/)
 
-## 🎯 Performance Targets
-- Plugin activation: <10ms
-- API response: <100ms
+```
+mcp-whisper-transcription/
+├── src/
+│   └── whisper_mcp_server.py  # Main MCP server
+├── transcribe_mlx.py           # Core transcriber
+├── whisper_utils.py            # Utilities
+├── test_*.py                   # Test files
+├── logs/                       # Log directory
+│   └── transcription_history.json  # History tracking
+└── temp/                       # Temporary files
+```
+
+## 🎯 Performance & Quality
+
+### Performance Targets
+- Transcription speed: >2x realtime (model dependent)
+- Server startup: <5s
+- Resource response: <100ms
 - Test coverage: ≥85%
-- Memory usage: <50MB per plugin
+- Memory usage: <500MB baseline
 
-## ⚠️ NON-NEGOTIABLE Rules
+### MCP Resource Patterns
+Resources should:
+- Return valid JSON always
+- Handle missing data gracefully
+- Support filtering/pagination where applicable
+- Include metadata in responses
+- Use proper URI schemes
 
-1. **NEVER skip memory search** - Always start with `search_memory("task_start_checklist")`
-2. **NEVER skip TDD** - Tests must come before implementation
-3. **NEVER skip top-down approach** - Always start with main() workflow
-4. **NEVER skip quality checks** - Tests and linting required before completion
-5. **NEVER skip comprehensive commits** - Use template from memory
-6. **NEVER skip memory archival** - Store learnings for future tasks
+## 📝 Git & Documentation
 
-## 🔧 Custom Commands Available
+### Commit Message Template
+```
+<type>(scope): <brief description>
 
-- `/start-task [task_id]` - Execute complete task startup workflow
-- `/tdd-workflow [feature]` - Follow TDD implementation steps
-- `/create-commit [task_id]` - Create comprehensive commit
+<detailed description including:>
+• Core features implemented
+• Performance metrics achieved
+• Technical approach used
+• Files changed and purpose
+• Test/demo outcomes
 
-## 💡 Emergency Troubleshooting
+Ready for <next task>.
+```
+
+Types: feat, fix, refactor, test, docs, perf  
+**NO Claude Code attribution lines**
+
+### Tag Management
+Tags isolate task contexts per branch:
+- Auto-create: `mcp__task-master__add_tag --fromBranch=true --projectRoot="/Users/sangle/Dev/action/projects/mcp-servers/tools/mcp-whisper-transcription"`
+- List: `mcp__task-master__list_tags --showMetadata=true`  
+- Switch: `mcp__task-master__use_tag --name="[tag]"`
+- Copy: `mcp__task-master__copy_tag --sourceName="[src]" --targetName="[dst]"`
+- Clean up: `mcp__task-master__delete_tag --name="[tag]"`
+
+## 🆘 Emergency Help
 
 - Stuck? → `search_memory("common_errors")`
 - Need patterns? → `search_memory("working_patterns")`
-- Architecture questions? → Check `specs/workflow/`
-- Task unclear? → Review task-master details and memory context
+- MCP patterns? → `mcp__graphiti-memory__search_memory_nodes --query="mcp patterns" --group_ids=["global_patterns"]`
+- FastMCP docs? → `mcp__context7__resolve-library-id --libraryName="fastmcp"`
+- Task unclear? → Review task-master details
+- Complex task? → `analyze_project_complexity`
+- Wrong context? → `list_tags` then `use_tag`
+
+### Knowledge Promotion
+When you discover a reusable pattern:
+1. Document in local memory for immediate use
+2. Extract general pattern → Add to global Graphiti
+3. Future projects benefit from this knowledge
+
+Example: `mcp__graphiti-memory__add_memory --name="Pattern: MCP Resource Implementation" --episode_body="Resource endpoints with FastMCP using @mcp.resource decorator..." --source="text" --group_id="global_patterns"`
+
+## 🔑 Memory Search Keys (Local Project Memory)
+
+*For global patterns, use: `mcp__graphiti-memory__search_memory_nodes --query="[pattern]" --group_ids=["global_patterns"]`*
+
+### Project-Specific Memories
+- `mcp_server_patterns` - MCP server implementation patterns
+- `fastmcp_usage` - FastMCP-specific patterns
+- `whisper_transcription` - Transcription workflows
+- `audio_processing` - Audio/video handling
+- `resource_endpoints` - MCP resource patterns
+- `test_patterns` - Testing approaches
+
+### Workflow Memories
+- `task_start_checklist` - Mandatory startup sequence
+- `task_completion_workflow` - Completion steps
+- `commit_message_template` - Git standards
+- `tag_management` - Context switching
+- `quality_checks` - Validation commands
+- `performance_targets` - System requirements
+- `research_commands` - AI research
+- `complexity_analysis` - Task expansion
+- `emergency_help` - Troubleshooting
+
+**Usage Tip**: Always start with summary files, then load specific patterns as needed to minimize context usage.
 
 ---
-**⚡ REMEMBER: This workflow is MANDATORY, not optional. Every step must be completed for successful task execution.**
+**Remember**: This workflow is MANDATORY, not optional. Every step must be completed for successful task execution.

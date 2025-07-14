@@ -2,6 +2,7 @@ import os
 import argparse
 import logging
 from pathlib import Path
+
 # Fix ffmpeg import for ffmpeg-python package
 try:
     import ffmpeg
@@ -9,6 +10,7 @@ except ImportError:
     # If direct import fails, try to install it
     import subprocess
     import sys
+
     print("Installing ffmpeg-python package...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "ffmpeg-python"])
     import ffmpeg
@@ -62,11 +64,13 @@ except ImportError:
             try:
                 # If direct import fails, try to install it
                 import subprocess
+
                 print("Installing mlx-whisper package...")
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "mlx-whisper"])
                 # Try importing again after installation
                 import mlx_whisper
                 from mlx_whisper import transcribe as mlx_whisper_transcribe
+
                 print("Successfully imported mlx_whisper after installing")
             except ImportError:
                 raise ImportError(
@@ -75,9 +79,7 @@ except ImportError:
 
 
 class WhisperTranscriber:
-    def __init__(
-        self, model_name="mlx-community/whisper-large-v3-mlx", output_formats=None
-    ):
+    def __init__(self, model_name="mlx-community/whisper-large-v3-mlx", output_formats=None):
         """Initialize with MLX optimized model"""
         self.base_dir = Path(__file__).parent
         self.raw_files_dir = self.base_dir / "raw_files"
@@ -139,9 +141,7 @@ class WhisperTranscriber:
             print(f"\nTranscribing: {audio_path.name}")
 
             main_pbar = tqdm(total=100, desc="Overall Progress", position=0, leave=True)
-            text_pbar = tqdm(
-                desc="Transcribing", position=1, leave=True, bar_format="{desc}"
-            )
+            text_pbar = tqdm(desc="Transcribing", position=1, leave=True, bar_format="{desc}")
 
             try:
                 main_pbar.update(10)
@@ -161,9 +161,7 @@ class WhisperTranscriber:
                     initial_prompt="The following is a high-quality transcript. Mark silence and pauses appropriately.",  # Help set expectations
                 )
                 processing_time = time.time() - start_time
-                self.logger.info(
-                    f"Transcription completed in {processing_time:.2f} seconds"
-                )
+                self.logger.info(f"Transcription completed in {processing_time:.2f} seconds")
 
                 # Convert string result to dictionary if needed
                 if isinstance(result, str):
@@ -206,9 +204,7 @@ class WhisperTranscriber:
 
         processed_videos = self.get_processed_videos()
         videos_to_process = [
-            video
-            for video in video_files
-            if self.needs_processing(video, processed_videos)
+            video for video in video_files if self.needs_processing(video, processed_videos)
         ]
 
         if not videos_to_process:
@@ -249,9 +245,7 @@ class WhisperTranscriber:
             reports_dir = Path("reports")
             reports_dir.mkdir(exist_ok=True)
 
-            report_path = (
-                reports_dir / f"performance_report_{datetime.now():%Y%m%d_%H%M%S}.txt"
-            )
+            report_path = reports_dir / f"performance_report_{datetime.now():%Y%m%d_%H%M%S}.txt"
             with open(report_path, "w") as f:
                 f.write(report)
             self.logger.info(f"Performance report saved to {report_path}")
@@ -303,14 +297,10 @@ class WhisperTranscriber:
                             data = json.load(f)
                             # Check for minimum content requirements
                             if not isinstance(data, dict):
-                                self.logger.warning(
-                                    f"Invalid JSON format in {transcript_path}"
-                                )
+                                self.logger.warning(f"Invalid JSON format in {transcript_path}")
                                 return True
                             if not data.get("text"):
-                                self.logger.warning(
-                                    f"No text content in {transcript_path}"
-                                )
+                                self.logger.warning(f"No text content in {transcript_path}")
                                 return True
                             # Check for empty or suspiciously small content
                             if len(data.get("text", "").split()) < 10:
@@ -319,9 +309,7 @@ class WhisperTranscriber:
                                 )
                                 return True
                     except (json.JSONDecodeError, IOError) as e:
-                        self.logger.warning(
-                            f"Error reading transcript {transcript_path}: {e}"
-                        )
+                        self.logger.warning(f"Error reading transcript {transcript_path}: {e}")
                         return True
 
                 # Validate text/markdown content
@@ -334,9 +322,7 @@ class WhisperTranscriber:
                             )
                             return True
                     except IOError as e:
-                        self.logger.warning(
-                            f"Error reading transcript {transcript_path}: {e}"
-                        )
+                        self.logger.warning(f"Error reading transcript {transcript_path}: {e}")
                         return True
 
         # All checks passed, no processing needed
@@ -472,9 +458,7 @@ class WhisperTranscriber:
             if f.suffix.lower() in media_extensions:
                 try:
                     probe = ffmpeg.probe(str(f))
-                    has_audio = any(
-                        stream["codec_type"] == "audio" for stream in probe["streams"]
-                    )
+                    has_audio = any(stream["codec_type"] == "audio" for stream in probe["streams"])
                     if has_audio:
                         valid_files.append(f)
                         self.logger.info(f"Found valid media file: {f}")
@@ -494,9 +478,7 @@ class WhisperTranscriber:
                 transcript_path.unlink()
                 self.logger.info(f"Removed existing transcript: {transcript_path}")
 
-    def split_audio_into_chunks(
-        self, audio_path: Path, chunk_duration: int = 1200
-    ) -> list[Path]:
+    def split_audio_into_chunks(self, audio_path: Path, chunk_duration: int = 1200) -> list[Path]:
         """Split audio into 20-minute chunks (1200 seconds)"""
         try:
             duration = get_video_duration(audio_path, self.logger)
@@ -519,14 +501,10 @@ class WhisperTranscriber:
             for i in range(0, total_chunks):
                 start_time = i * chunk_duration
                 chunk_path = chunk_dir / f"{audio_path.stem}_chunk_{i + 1}.wav"
-                self.logger.info(
-                    f"Creating chunk {i + 1}/{total_chunks} at position {start_time}s"
-                )
+                self.logger.info(f"Creating chunk {i + 1}/{total_chunks} at position {start_time}s")
 
                 try:
-                    stream = ffmpeg.input(
-                        str(audio_path), ss=start_time, t=chunk_duration
-                    )
+                    stream = ffmpeg.input(str(audio_path), ss=start_time, t=chunk_duration)
                     stream = ffmpeg.output(
                         stream, str(chunk_path), acodec="pcm_s16le", ac=1, ar="16000"
                     )
@@ -546,9 +524,7 @@ class WhisperTranscriber:
     def merge_transcripts(self, transcript_paths: list[Path], output_path: Path):
         """Merge and clean multiple transcript files into one, with all formats"""
         try:
-            self.logger.info(
-                f"Merging {len(transcript_paths)} transcript files to {output_path}"
-            )
+            self.logger.info(f"Merging {len(transcript_paths)} transcript files to {output_path}")
 
             # 1. First merge the raw text transcripts
             merged_text = []
@@ -575,10 +551,7 @@ class WhisperTranscriber:
                                 chunk_data = json.load(f)
 
                                 # Clean segments text
-                                if (
-                                    isinstance(chunk_data, dict)
-                                    and "segments" in chunk_data
-                                ):
+                                if isinstance(chunk_data, dict) and "segments" in chunk_data:
                                     for segment in chunk_data["segments"]:
                                         if "text" in segment:
                                             segment["text"] = self._clean_text_content(
@@ -586,15 +559,10 @@ class WhisperTranscriber:
                                             )
 
                                 # Adjust timestamps for segments
-                                if (
-                                    isinstance(chunk_data, dict)
-                                    and "segments" in chunk_data
-                                ):
+                                if isinstance(chunk_data, dict) and "segments" in chunk_data:
                                     for segment in chunk_data["segments"]:
                                         # Skip empty or irrelevant segments
-                                        if not segment.get(
-                                            "text"
-                                        ) or self._should_skip_content(
+                                        if not segment.get("text") or self._should_skip_content(
                                             segment.get("text", "")
                                         ):
                                             continue
@@ -605,18 +573,11 @@ class WhisperTranscriber:
 
                                     # Update time offset for next chunk
                                     if chunk_data["segments"]:
-                                        current_time_offset = chunk_data["segments"][
-                                            -1
-                                        ]["end"]
+                                        current_time_offset = chunk_data["segments"][-1]["end"]
 
                                 # Count words
-                                if (
-                                    isinstance(chunk_data, dict)
-                                    and "text" in chunk_data
-                                ):
-                                    cleaned_text = self._clean_text_content(
-                                        chunk_data["text"]
-                                    )
+                                if isinstance(chunk_data, dict) and "text" in chunk_data:
+                                    cleaned_text = self._clean_text_content(chunk_data["text"])
                                     total_words += len(cleaned_text.split())
                                     self.logger.debug(
                                         f"Chunk {i} word count: {len(cleaned_text.split())}"
@@ -654,9 +615,7 @@ class WhisperTranscriber:
                 if path.exists():
                     content = path.read_text(encoding="utf-8")
                     for line in content.split("\n"):
-                        timestamp_match = re.match(
-                            r"\[([\d\.]+)s - ([\d\.]+)s\]:", line
-                        )
+                        timestamp_match = re.match(r"\[([\d\.]+)s - ([\d\.]+)s\]:", line)
                         if timestamp_match:
                             start_time = float(timestamp_match.group(1))
                             end_time = float(timestamp_match.group(2))
@@ -720,9 +679,7 @@ class WhisperTranscriber:
             # Save original version for comparison
             original_path = output_path.with_stem(f"{output_path.stem}_original")
             original_path.write_text(merged, encoding="utf-8")
-            self.logger.info(
-                f"Original unprocessed transcript saved to: {original_path}"
-            )
+            self.logger.info(f"Original unprocessed transcript saved to: {original_path}")
 
         except Exception as e:
             self.logger.error(f"Error merging transcripts: {str(e)}")
@@ -975,9 +932,7 @@ def main():
         choices=["mlx-community/whisper-large-v3-turbo"],
         help="MLX Whisper model to use",
     )
-    parser.add_argument(
-        "--force", action="store_true", help="Force reprocessing of all videos"
-    )
+    parser.add_argument("--force", action="store_true", help="Force reprocessing of all videos")
     parser.add_argument(
         "--force-video",
         help="Force reprocessing of a specific video (filename without extension)",
@@ -997,9 +952,7 @@ def main():
         logger.addHandler(logging.StreamHandler())
         logger.info(f"Starting MLX Whisper Transcriber")
 
-        transcriber = WhisperTranscriber(
-            model_name=args.model, output_formats=args.output_formats
-        )
+        transcriber = WhisperTranscriber(model_name=args.model, output_formats=args.output_formats)
 
         if args.force:
             logger.info("Forcing reprocessing of all transcripts")
