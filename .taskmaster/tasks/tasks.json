@@ -18,7 +18,7 @@
         "description": "Set up the Python project structure with FastMCP dependencies and existing whisper transcription code",
         "details": "Create the foundational Python project structure including:\n\n1. Create pyproject.toml with Poetry configuration:\n   - Project name: mcp-whisper-transcription\n   - Python version: ^3.9\n   - Dependencies:\n     * fastmcp>=2.0.0\n     * mlx-whisper>=0.4.2\n     * ffmpeg-python>=0.2.0\n     * tqdm>=4.66.0\n     * psutil>=5.9.0\n     * humanize>=4.8.0\n   - Dev dependencies: pytest, black, isort\n\n2. Copy existing implementation files:\n   - transcribe_mlx.py from /Users/sangle/Dev/action/projects/@ai/whisper-transcription\n   - whisper_utils.py from /Users/sangle/Dev/action/projects/@ai/whisper-transcription\n   - Preserve all existing functionality\n\n3. Create directory structure:\n   - src/\n     * __init__.py\n     * whisper_mcp_server.py (main MCP server file)\n   - tests/\n     * __init__.py\n     * test_transcription.py\n   - examples/\n     * example_audio.m4a\n     * usage_example.py\n\n4. Create configuration files:\n   - .env.example with:\n     * DEFAULT_MODEL=mlx-community/whisper-large-v3-mlx\n     * OUTPUT_FORMATS=txt,md,srt\n     * MAX_WORKERS=4\n     * TEMP_DIR=./temp\n   - .gitignore (Python-specific)\n   - README.md (initial structure)\n\n5. Initialize Poetry environment:\n   - Run poetry init and configure\n   - Run poetry install to create lock file\n   - Verify all dependencies are installed",
         "testStrategy": "- Verify Poetry environment activates correctly\n- Test import of all dependencies\n- Ensure existing transcribe_mlx.py and whisper_utils.py work in new environment\n- Run a simple transcription test to verify MLX Whisper loads",
-        "status": "in-progress",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": []
@@ -153,7 +153,7 @@
     ],
     "metadata": {
       "created": "2025-06-15T20:25:09.429Z",
-      "updated": "2025-07-14T18:53:00.000Z",
+      "updated": "2025-07-14T18:51:06.300Z",
       "description": "Tasks for master context - Updated for FastMCP Python implementation"
     }
   }

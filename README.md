@@ -1,82 +1,118 @@
 # MCP Whisper Transcription Server
 
-An MCP (Model Context Protocol) server that provides audio transcription capabilities using OpenAI's Whisper API.
+An MCP (Model Context Protocol) server for audio/video transcription using MLX-optimized Whisper models. Optimized for Apple Silicon devices with ultra-fast performance.
 
 ## Features
 
-- Transcribe audio files using OpenAI's Whisper API
-- Support for multiple audio formats
-- Configurable transcription parameters (language, prompt, temperature)
-- Multiple output formats (text, JSON, SRT, VTT)
+- 🚀 **MLX-Optimized**: Leverages Apple Silicon for blazing-fast transcription
+- 🎯 **Multiple Formats**: Supports txt, md, srt, and json output formats
+- 🎬 **Video Support**: Automatically extracts audio from video files
+- 📦 **Batch Processing**: Process multiple files in parallel
+- 🔧 **MCP Integration**: Full MCP protocol support with tools and resources
 
 ## Installation
 
-```bash
-npm install
-npm run build
-```
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/galacoder/mcp-whisper-transcription.git
+   cd mcp-whisper-transcription
+   ```
+
+2. **Install Poetry** (if not already installed):
+   ```bash
+   curl -sSL https://install.python-poetry.org | python3 -
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   poetry install
+   ```
+
+4. **Copy environment configuration**:
+   ```bash
+   cp .env.example .env
+   ```
 
 ## Configuration
 
-Set your OpenAI API key as an environment variable:
-
-```bash
-export OPENAI_API_KEY="your-api-key-here"
-```
+Edit `.env` to configure:
+- `DEFAULT_MODEL`: Choose from tiny, base, small, medium, large-v3, or large-v3-turbo
+- `OUTPUT_FORMATS`: Comma-separated list of output formats
+- `MAX_WORKERS`: Number of parallel workers for batch processing
+- `TEMP_DIR`: Directory for temporary files
 
 ## Usage
 
-### As an MCP Server
+### As MCP Server
 
-Add to your MCP client configuration:
+Add to your Claude Code configuration:
 
 ```json
 {
   "mcpServers": {
     "whisper-transcription": {
-      "command": "node",
-      "args": ["/path/to/mcp-whisper-transcription/dist/index.js"],
-      "env": {
-        "OPENAI_API_KEY": "your-api-key-here"
-      }
+      "command": "poetry",
+      "args": ["run", "python", "-m", "src.whisper_mcp_server"],
+      "cwd": "/path/to/mcp-whisper-transcription"
     }
   }
 }
 ```
 
-### Available Tool
+### Available MCP Tools
 
-The server provides one tool:
+- **transcribe_file**: Transcribe a single audio/video file
+- **batch_transcribe**: Process multiple files in a directory
+- **list_models**: Show available Whisper models
+- **get_model_info**: Get details about a specific model
+- **clear_cache**: Clear model cache
+- **estimate_processing_time**: Estimate transcription time
+- **validate_media_file**: Check file compatibility
+- **get_supported_formats**: List supported input/output formats
 
-- **transcribe_audio**: Transcribe audio files using OpenAI Whisper API
-  - `audioFilePath` (required): Path to the audio file to transcribe
-  - `language` (optional): The language of the audio (ISO-639-1 format)
-  - `prompt` (optional): Optional prompt to guide the transcription
-  - `responseFormat` (optional): Format of the transcription output (json, text, srt, verbose_json, vtt)
-  - `temperature` (optional): Sampling temperature (0-1)
+### Available MCP Resources
+
+- `transcription://history` - Recent transcriptions
+- `transcription://history/{id}` - Specific transcription details
+- `transcription://models` - Available models
+- `transcription://config` - Current configuration
+- `transcription://formats` - Supported formats
+- `transcription://performance` - Performance statistics
 
 ## Development
 
+### Running Tests
 ```bash
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run dev
-
-# Build for production
-npm run build
-
-# Run tests
-npm test
-
-# Lint code
-npm run lint
-
-# Type check
-npm run typecheck
+poetry run pytest
 ```
+
+### Code Formatting
+```bash
+poetry run black .
+poetry run isort .
+```
+
+### Type Checking
+```bash
+poetry run mypy src/
+```
+
+## Requirements
+
+- Python 3.9+
+- Apple Silicon Mac (for MLX optimization)
+- ffmpeg (for video file support)
 
 ## License
 
-MIT
+MIT License - see LICENSE file for details
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Acknowledgments
+
+- Built with [FastMCP](https://github.com/jlowin/fastmcp)
+- Powered by [MLX Whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
+- Original Whisper by [OpenAI](https://github.com/openai/whisper)

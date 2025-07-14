@@ -1,84 +1,168 @@
-# IDE and editor directories
-.cursor/
-.roo/
-.vscode/
-.idea/
-
-# Generated output files
-@generated/
-*.html
-*.png
-*.mmd
-
-# Downloaded files
-@download/
-
-# Sensitive files
-.env
-.env.*
-*.keys.json
-*-oauth.json
-*-tokens.json
-*.token
-
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
 venv/
 ENV/
-env/
-.venv
+env.bak/
+venv.bak/
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm
+# Spyder project settings
+.spyderproject
+.spyproject
 
-# Build outputs
-dist/
-build/
-*.egg-info/
+# Rope project settings
+.ropeproject
 
-# Test outputs
-.pytest_cache/
-.coverage
-htmlcov/
-*.log
+# mkdocs documentation
+/site
 
-# OS files
-.DS_Store
-Thumbs.db
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
-# Temporary files
-*.tmp
-*.temp
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# IDE
+.idea/
+.vscode/
 *.swp
 *.swo
 *~
 
-# Task Master local files
-# .taskmaster/  # Commented out - we want to include taskmaster files in this project
+# OS
+.DS_Store
+Thumbs.db
 
-# Added by Task Master AI
-# Logs
-logs
-dev-debug.log
-# Dependency directories
-# Environment variables
-# Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-# OS specific
-# Task files
-# tasks.json  # Commented out - we want to include task files in this project
-# tasks/      # Commented out - we want to include task files in this project 
+# Project specific
+logs/
+temp/
+raw_files/
+transcripts/
+*.m4a
+*.mp3
+*.wav
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Node.js artifacts (to be removed)
+node_modules/
+package-lock.json
+package.json
+tsconfig.json
+src/*.ts
+src/*.js
+
+# Keep taskmaster files
+# .taskmaster/ is tracked in this project 
