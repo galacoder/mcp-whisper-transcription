@@ -1,0 +1,84 @@
+# IDE and editor directories
+.cursor/
+.roo/
+.vscode/
+.idea/
+
+# Generated output files
+@generated/
+*.html
+*.png
+*.mmd
+
+# Downloaded files
+@download/
+
+# Sensitive files
+.env
+.env.*
+*.keys.json
+*-oauth.json
+*-tokens.json
+*.token
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Test outputs
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Task Master local files
+.taskmaster/
+
+# Added by Task Master AI
+# Logs
+logs
+dev-debug.log
+# Dependency directories
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/ 
