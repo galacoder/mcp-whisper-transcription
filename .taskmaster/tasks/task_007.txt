@@ -1,0 +1,102 @@
+# Task ID: 7
+# Title: Create Support Tools
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Implement supporting tools for model management and transcription utilities
+# Details:
+Create additional MCP tools for enhanced functionality:
+
+1. **list_models** - List available MLX Whisper models:
+```python
+@mcp.tool
+def list_models() -> dict:
+    """List all available MLX Whisper models with details."""
+    models = [
+        {"id": "mlx-community/whisper-tiny-mlx", "size": "39M", "speed": "~10x", "accuracy": "Good"},
+        {"id": "mlx-community/whisper-base-mlx", "size": "74M", "speed": "~7x", "accuracy": "Better"},
+        {"id": "mlx-community/whisper-small-mlx", "size": "244M", "speed": "~5x", "accuracy": "Very Good"},
+        {"id": "mlx-community/whisper-medium-mlx", "size": "769M", "speed": "~3x", "accuracy": "Excellent"},
+        {"id": "mlx-community/whisper-large-v3-mlx", "size": "1550M", "speed": "~2x", "accuracy": "Best"},
+        {"id": "mlx-community/whisper-large-v3-turbo", "size": "809M", "speed": "~4x", "accuracy": "Excellent"}
+    ]
+    return {
+        "models": models,
+        "current_model": transcriber.model_name if transcriber else DEFAULT_MODEL,
+        "cache_dir": str(Path.home() / ".cache" / "huggingface")
+    }
+```
+
+2. **get_model_info** - Get specific model details:
+```python
+@mcp.tool
+def get_model_info(model_id: str) -> dict:
+    """Get detailed information about a specific Whisper model."""
+    # Implementation returns model stats, requirements, etc.
+```
+
+3. **clear_cache** - Clear model cache:
+```python
+@mcp.tool
+def clear_cache(model_id: str = None) -> dict:
+    """Clear downloaded model cache.
+    
+    Args:
+        model_id: Specific model to clear, or None for all models
+    """
+    # Clear from ~/.cache/huggingface/
+```
+
+4. **estimate_processing_time** - Estimate transcription time:
+```python
+@mcp.tool
+def estimate_processing_time(
+    file_path: str,
+    model: str = None
+) -> dict:
+    """Estimate processing time for a file.
+    
+    Returns:
+        dict with duration, estimated_time, and model_speed
+    """
+    # Calculate based on file duration and model speed
+```
+
+5. **validate_media_file** - Check file compatibility:
+```python
+@mcp.tool
+def validate_media_file(file_path: str) -> dict:
+    """Validate if a file can be transcribed.
+    
+    Returns:
+        dict with is_valid, format, duration, issues
+    """
+    # Check format, codec, duration, etc.
+```
+
+6. **get_supported_formats** - List all supported formats:
+```python
+@mcp.tool
+def get_supported_formats() -> dict:
+    """Get lists of supported input and output formats."""
+    return {
+        "input_formats": {
+            "audio": [".mp3", ".wav", ".m4a", ".flac", ".ogg"],
+            "video": [".mp4", ".mov", ".avi", ".mkv", ".webm"]
+        },
+        "output_formats": {
+            "txt": "Plain text with timestamps",
+            "md": "Markdown formatted text",
+            "srt": "SubRip subtitle format",
+            "json": "Full transcription data with segments"
+        }
+    }
+```
+
+# Test Strategy:
+- Test each tool independently
+- Verify model listing accuracy
+- Test cache clearing functionality
+- Validate time estimation accuracy
+- Test file validation with various formats
+- Ensure all tools handle errors gracefully

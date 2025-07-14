@@ -1,0 +1,120 @@
+# Task ID: 8
+# Title: Implement Resource Endpoints
+# Status: pending
+# Dependencies: 5, 6
+# Priority: medium
+# Description: Create MCP resource endpoints for transcription data access
+# Details:
+Implement MCP resource endpoints for accessing transcription data:
+
+1. **transcription://history** - Recent transcriptions list:
+```python
+@mcp.resource("transcription://history")
+async def get_transcription_history() -> dict:
+    """Get list of recent transcriptions."""
+    # Read from a history.json file maintained by the server
+    history_file = Path("logs") / "transcription_history.json"
+    
+    if history_file.exists():
+        with open(history_file) as f:
+            history = json.load(f)
+    else:
+        history = []
+    
+    # Return last 50 transcriptions
+    return {
+        "transcriptions": history[-50:],
+        "total_count": len(history)
+    }
+```
+
+2. **transcription://history/{id}** - Specific transcription details:
+```python
+@mcp.resource("transcription://history/{transcription_id}")
+async def get_transcription_details(transcription_id: str) -> dict:
+    """Get detailed information about a specific transcription."""
+    # Retrieve from history by ID
+    # Include full segments, metadata, performance stats
+```
+
+3. **transcription://models** - Available models resource:
+```python
+@mcp.resource("transcription://models")
+def get_models_resource() -> dict:
+    """Resource endpoint for available models."""
+    return list_models()  # Reuse the tool function
+```
+
+4. **transcription://config** - Current configuration:
+```python
+@mcp.resource("transcription://config")
+def get_config_resource() -> dict:
+    """Get current server configuration."""
+    return {
+        "default_model": DEFAULT_MODEL,
+        "output_formats": DEFAULT_FORMATS,
+        "max_workers": MAX_WORKERS,
+        "temp_dir": str(TEMP_DIR),
+        "version": "1.0.0"
+    }
+```
+
+5. **transcription://formats** - Supported formats:
+```python
+@mcp.resource("transcription://formats")
+def get_formats_resource() -> dict:
+    """Resource for supported formats."""
+    return get_supported_formats()  # Reuse the tool
+```
+
+6. **transcription://performance** - Performance statistics:
+```python
+@mcp.resource("transcription://performance")
+async def get_performance_stats() -> dict:
+    """Get server performance statistics."""
+    # Aggregate performance data
+    return {
+        "total_transcriptions": performance_report.total_files,
+        "total_audio_hours": performance_report.total_duration / 3600,
+        "average_speed": performance_report.average_speed,
+        "uptime": time.time() - server_start_time
+    }
+```
+
+History tracking implementation:
+```python
+# Add to transcribe_file after successful transcription
+def record_transcription(file_path: str, result: dict):
+    """Record transcription in history."""
+    history_file = Path("logs") / "transcription_history.json"
+    
+    entry = {
+        "id": str(uuid.uuid4()),
+        "timestamp": datetime.now().isoformat(),
+        "file_path": file_path,
+        "model": result["model_used"],
+        "duration": result["duration"],
+        "processing_time": result["processing_time"],
+        "output_files": result["output_files"]
+    }
+    
+    # Load existing history
+    if history_file.exists():
+        with open(history_file) as f:
+            history = json.load(f)
+    else:
+        history = []
+    
+    # Append and save
+    history.append(entry)
+    with open(history_file, 'w') as f:
+        json.dump(history, f, indent=2)
+```
+
+# Test Strategy:
+- Test resource URI parsing and routing
+- Verify history is properly recorded
+- Test pagination for large histories
+- Test resource filtering parameters
+- Verify all resources return valid JSON
+- Test concurrent resource access

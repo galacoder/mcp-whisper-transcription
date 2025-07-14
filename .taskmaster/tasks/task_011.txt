@@ -1,0 +1,113 @@
+# Task ID: 11
+# Title: Prepare for Release
+# Status: pending
+# Dependencies: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+# Priority: medium
+# Description: Final preparation steps for releasing the MCP server
+# Details:
+Prepare for public release:
+
+1. **Update pyproject.toml** with proper metadata:
+```toml
+[tool.poetry]
+name = "mcp-whisper-transcription"
+version = "1.0.0"
+description = "FastMCP server for audio/video transcription using MLX Whisper"
+authors = ["Your Name <email@example.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/yourusername/mcp-whisper-transcription"
+keywords = ["mcp", "whisper", "transcription", "mlx", "fastmcp"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+[tool.poetry.scripts]
+mcp-whisper = "src.whisper_mcp_server:main"
+```
+
+2. **Create LICENSE file** (MIT License)
+
+3. **Set up GitHub Actions** (.github/workflows/ci.yml):
+```yaml
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+    
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        brew install ffmpeg
+        pip install poetry
+        poetry install
+    - name: Run tests
+      run: poetry run pytest
+    - name: Check formatting
+      run: |
+        poetry run black --check .
+        poetry run isort --check .
+```
+
+4. **Create release process**:
+- Tag version in git: `git tag v1.0.0`
+- Build distribution: `poetry build`
+- Create GitHub release with:
+  - Release notes from CHANGELOG
+  - Built wheel and sdist files
+  - Installation instructions
+
+5. **Publish to PyPI**:
+```bash
+# Configure PyPI token
+poetry config pypi-token.pypi <your-token>
+
+# Publish
+poetry publish
+```
+
+6. **Update MCP server registry**:
+- Submit PR to official MCP registry
+- Include server description and capabilities
+- Add usage examples
+
+7. **Create demo materials**:
+- Record demo video showing:
+  - Installation process
+  - Single file transcription
+  - Batch processing
+  - Different output formats
+- Create blog post announcing release
+- Share on social media
+
+8. **Post-release checklist**:
+- Monitor GitHub issues
+- Set up discussion forum
+- Plan roadmap for v2.0 features:
+  - Speaker diarization
+  - Real-time transcription
+  - Cloud storage integration
+  - Web UI
+
+# Test Strategy:
+- Test full installation on clean macOS system
+- Verify PyPI package installs correctly
+- Test GitHub Actions workflow
+- Ensure all documentation links work
+- Test demo examples
+- Get beta user feedback before public release

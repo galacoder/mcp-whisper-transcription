@@ -1,0 +1,114 @@
+# Task ID: 5
+# Title: Implement transcribe_file Tool
+# Status: pending
+# Dependencies: 4
+# Priority: high
+# Description: Create the main transcribe_file tool for single file transcription using FastMCP decorators
+# Details:
+Implement the transcribe_file MCP tool with detailed parameters:
+
+```python
+@mcp.tool
+async def transcribe_file(
+    file_path: str,
+    model: str = None,
+    output_formats: str = None,
+    language: str = "en",
+    task: str = "transcribe",
+    output_dir: str = None,
+    temperature: float = 0.0,
+    no_speech_threshold: float = 0.45,
+    initial_prompt: str = None
+) -> dict:
+    """
+    Transcribe a single audio/video file using MLX Whisper.
+    
+    Args:
+        file_path: Path to audio/video file (required)
+        model: Whisper model to use (default: from environment)
+        output_formats: Comma-separated formats (txt,md,srt,json)
+        language: Language code (default: en)
+        task: Task type - 'transcribe' or 'translate'
+        output_dir: Directory for output files (default: same as input)
+        temperature: Sampling temperature (0.0 = deterministic)
+        no_speech_threshold: Silence detection threshold
+        initial_prompt: Optional prompt to guide transcription style
+    
+    Returns:
+        dict with:
+        - text: Full transcription text
+        - segments: List of timestamped segments
+        - output_files: Paths to generated files
+        - duration: Audio duration in seconds
+        - processing_time: Time taken to transcribe
+        - model_used: Name of the model used
+    """
+    try:
+        # Validate file exists
+        input_path = Path(file_path)
+        if not input_path.exists():
+            raise TranscriptionError(f"File not found: {file_path}")
+        
+        # Get transcriber instance
+        transcriber = get_transcriber(model)
+        
+        # Set output directory
+        output_path = Path(output_dir) if output_dir else input_path.parent
+        output_base = output_path / input_path.stem
+        
+        # Override output formats if specified
+        if output_formats:
+            transcriber.output_formats = set(output_formats.split(','))
+        
+        # Extract audio if needed (video file)
+        if input_path.suffix.lower() in ['.mp4', '.mov', '.avi', '.mkv']:
+            audio_path = extract_audio(input_path, TEMP_DIR)
+        else:
+            audio_path = input_path
+        
+        # Perform transcription
+        start_time = time.time()
+        result = transcriber.transcribe_audio(
+            audio_path,
+            output_base,
+            language=language,
+            task=task,
+            temperature=temperature,
+            no_speech_threshold=no_speech_threshold,
+            initial_prompt=initial_prompt
+        )
+        processing_time = time.time() - start_time
+        
+        # Get list of output files
+        output_files = []
+        for fmt in transcriber.output_formats:
+            file_path = f"{output_base}.{fmt}"
+            if Path(file_path).exists():
+                output_files.append(file_path)
+        
+        # Clean up temp audio if extracted
+        if audio_path != input_path:
+            audio_path.unlink()
+        
+        return {
+            "text": result.get("text", ""),
+            "segments": result.get("segments", []),
+            "output_files": output_files,
+            "duration": get_video_duration(input_path),
+            "processing_time": processing_time,
+            "model_used": transcriber.model_name
+        }
+        
+    except Exception as e:
+        logger.error(f"Transcription failed: {str(e)}", exc_info=True)
+        raise TranscriptionError(f"Transcription failed: {str(e)}")
+```
+
+# Test Strategy:
+- Test with various audio formats (mp3, wav, m4a)
+- Test with video files (mp4, mov)
+- Test invalid file paths
+- Test all output format combinations
+- Test language and task parameters
+- Verify proper error messages
+- Test concurrent transcriptions

@@ -80,5 +80,5 @@ dev-debug.log
 *.sw?
 # OS specific
 # Task files
-tasks.json
-tasks/ 
+# tasks.json  # Commented out - we want to include task files in this project
+# tasks/      # Commented out - we want to include task files in this project 

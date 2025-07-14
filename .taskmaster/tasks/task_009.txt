@@ -1,0 +1,141 @@
+# Task ID: 9
+# Title: Test MCP Integrations
+# Status: pending
+# Dependencies: 8
+# Priority: high
+# Description: Create comprehensive tests for all MCP tools and resources using pytest
+# Details:
+Implement comprehensive testing suite:
+
+1. **Unit Tests** (tests/test_transcriber.py):
+```python
+import pytest
+from pathlib import Path
+from src.whisper_mcp_server import get_transcriber
+
+class TestWhisperTranscriber:
+    def test_singleton_pattern(self):
+        """Test transcriber singleton behavior."""
+        t1 = get_transcriber()
+        t2 = get_transcriber()
+        assert t1 is t2
+    
+    def test_model_switching(self):
+        """Test changing models creates new instance."""
+        t1 = get_transcriber("mlx-community/whisper-tiny-mlx")
+        t2 = get_transcriber("mlx-community/whisper-base-mlx")
+        assert t1 is not t2
+```
+
+2. **Integration Tests** (tests/test_mcp_tools.py):
+```python
+import pytest
+from fastmcp import Client
+from src.whisper_mcp_server import mcp
+
+@pytest.fixture
+async def client():
+    """Create test client."""
+    async with Client(mcp) as client:
+        yield client
+
+class TestMCPTools:
+    async def test_transcribe_file(self, client):
+        """Test single file transcription."""
+        result = await client.call_tool(
+            "transcribe_file",
+            {"file_path": "examples/test_audio.m4a"}
+        )
+        assert "text" in result
+        assert "segments" in result
+    
+    async def test_batch_transcribe(self, client):
+        """Test batch processing."""
+        result = await client.call_tool(
+            "batch_transcribe",
+            {
+                "directory": "examples",
+                "pattern": "*.m4a"
+            }
+        )
+        assert result["processed"] > 0
+```
+
+3. **Resource Tests** (tests/test_resources.py):
+```python
+class TestMCPResources:
+    async def test_history_resource(self, client):
+        """Test history resource endpoint."""
+        resources = await client.read_resource("transcription://history")
+        assert isinstance(resources, dict)
+        assert "transcriptions" in resources
+```
+
+4. **Performance Tests** (tests/test_performance.py):
+```python
+import time
+
+class TestPerformance:
+    async def test_transcription_speed(self, client):
+        """Test transcription meets speed targets."""
+        start = time.time()
+        result = await client.call_tool(
+            "transcribe_file",
+            {
+                "file_path": "examples/1_minute_audio.m4a",
+                "model": "mlx-community/whisper-tiny-mlx"
+            }
+        )
+        elapsed = time.time() - start
+        
+        # Should be faster than realtime
+        assert elapsed < 60  # Less than audio duration
+```
+
+5. **Error Handling Tests** (tests/test_errors.py):
+```python
+class TestErrorHandling:
+    async def test_invalid_file(self, client):
+        """Test handling of invalid files."""
+        with pytest.raises(Exception) as exc:
+            await client.call_tool(
+                "transcribe_file",
+                {"file_path": "nonexistent.mp3"}
+            )
+        assert "not found" in str(exc.value)
+```
+
+6. **Mock Tests** (tests/test_mocks.py):
+```python
+from unittest.mock import Mock, patch
+
+class TestWithMocks:
+    @patch('mlx_whisper.transcribe')
+    async def test_transcribe_mock(self, mock_transcribe, client):
+        """Test with mocked MLX transcribe."""
+        mock_transcribe.return_value = {
+            "text": "Mocked transcription",
+            "segments": []
+        }
+        
+        result = await client.call_tool(
+            "transcribe_file",
+            {"file_path": "test.mp3"}
+        )
+        assert result["text"] == "Mocked transcription"
+```
+
+7. **Example Scripts** (examples/):
+- basic_transcription.py - Simple single file example
+- batch_processing.py - Batch transcription example
+- model_comparison.py - Compare different models
+- real_time_monitoring.py - Monitor transcription progress
+
+# Test Strategy:
+- Run tests with pytest
+- Use pytest-asyncio for async tests
+- Mock MLX models for fast testing
+- Test with real audio files in integration tests
+- Measure code coverage (target 85%+)
+- Run performance benchmarks
+- Test on different audio formats and durations

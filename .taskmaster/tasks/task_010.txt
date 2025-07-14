@@ -1,0 +1,119 @@
+# Task ID: 10
+# Title: Create Comprehensive Documentation
+# Status: pending
+# Dependencies: 9
+# Priority: high
+# Description: Write complete documentation for the MCP server
+# Details:
+Create comprehensive documentation structure:
+
+1. **README.md** - Main documentation:
+```markdown
+# Whisper Transcription MCP Server
+
+Ultra-fast audio/video transcription using MLX-optimized Whisper models for Apple Silicon.
+
+## Features
+- 🚀 Blazing fast transcription on Apple Silicon
+- 📁 Batch processing with parallel execution
+- 🎯 Multiple output formats (TXT, MD, SRT, JSON)
+- 🔧 FastMCP integration for easy tool access
+- 📊 Performance tracking and reporting
+
+## Quick Start
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/mcp-whisper-transcription
+cd mcp-whisper-transcription
+
+# Install dependencies
+poetry install
+
+# Run the server
+poetry run python src/whisper_mcp_server.py
+```
+
+### Claude Desktop Configuration
+Add to your Claude Desktop config:
+```json
+{
+  "mcpServers": {
+    "whisper": {
+      "command": "poetry",
+      "args": ["run", "python", "/path/to/src/whisper_mcp_server.py"]
+    }
+  }
+}
+```
+```
+
+2. **SETUP.md** - Detailed setup guide:
+- System requirements (macOS, Apple Silicon)
+- FFmpeg installation
+- Poetry setup
+- Environment configuration
+- Troubleshooting common issues
+
+3. **API.md** - Complete API reference:
+- All tools with parameters and examples
+- All resources with response formats
+- Error codes and handling
+- Rate limits and performance considerations
+
+4. **MODELS.md** - Model comparison guide:
+- Model sizes and performance
+- Accuracy vs speed tradeoffs
+- Memory requirements
+- Use case recommendations
+
+5. **TROUBLESHOOTING.md** - Common issues:
+- FFmpeg not found
+- Model download failures
+- Memory issues with large files
+- Performance optimization tips
+
+6. **EXAMPLES.md** - Usage examples:
+```python
+# Single file transcription
+result = await client.call_tool(
+    "transcribe_file",
+    {
+        "file_path": "interview.mp4",
+        "output_formats": "txt,srt",
+        "model": "mlx-community/whisper-large-v3-turbo"
+    }
+)
+
+# Batch processing
+result = await client.call_tool(
+    "batch_transcribe",
+    {
+        "directory": "./podcasts",
+        "pattern": "*.mp3",
+        "max_workers": 4
+    }
+)
+```
+
+7. **CONTRIBUTING.md** - Contribution guidelines:
+- Code style (Black, isort)
+- Testing requirements
+- PR process
+- Issue templates
+
+8. **CHANGELOG.md** - Version history:
+- Version 1.0.0 - Initial release
+  - FastMCP integration
+  - MLX Whisper support
+  - Batch processing
+  - Multiple output formats
+
+# Test Strategy:
+- Review all documentation for accuracy
+- Test all code examples
+- Verify setup instructions work on clean system
+- Check API documentation completeness
+- Ensure troubleshooting covers real issues
+- Get feedback from test users

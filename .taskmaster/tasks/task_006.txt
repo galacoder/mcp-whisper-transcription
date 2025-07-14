@@ -1,0 +1,160 @@
+# Task ID: 6
+# Title: Implement batch_transcribe Tool
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Create the batch_transcribe tool for processing multiple files with parallel processing
+# Details:
+Implement the batch_transcribe MCP tool with advanced features:
+
+```python
+@mcp.tool
+async def batch_transcribe(
+    directory: str,
+    pattern: str = "*",
+    recursive: bool = False,
+    max_workers: int = None,
+    output_formats: str = None,
+    skip_existing: bool = True,
+    output_dir: str = None
+) -> dict:
+    """
+    Batch transcribe multiple files matching pattern.
+    
+    Args:
+        directory: Directory containing media files
+        pattern: Glob pattern for files (e.g., "*.mp4", "audio_*.m4a")
+        recursive: Search subdirectories recursively
+        max_workers: Number of parallel workers (default: from env)
+        output_formats: Output formats for all files
+        skip_existing: Skip files that already have transcripts
+        output_dir: Optional separate output directory
+    
+    Returns:
+        dict with:
+        - total_files: Number of files found
+        - processed: Number of files processed
+        - skipped: Number of files skipped
+        - failed: Number of files that failed
+        - results: Array of individual file results
+        - performance_report: Overall performance statistics
+    """
+    try:
+        # Find matching files
+        dir_path = Path(directory)
+        if not dir_path.exists():
+            raise TranscriptionError(f"Directory not found: {directory}")
+        
+        if recursive:
+            files = list(dir_path.rglob(pattern))
+        else:
+            files = list(dir_path.glob(pattern))
+        
+        # Filter to supported formats
+        supported_extensions = {'.mp3', '.wav', '.m4a', '.mp4', '.mov', '.avi', '.mkv'}
+        media_files = [f for f in files if f.suffix.lower() in supported_extensions]
+        
+        if not media_files:
+            return {
+                "total_files": 0,
+                "processed": 0,
+                "skipped": 0,
+                "failed": 0,
+                "results": [],
+                "performance_report": "No media files found"
+            }
+        
+        # Check which files need processing
+        files_to_process = []
+        skipped_files = []
+        
+        for file in media_files:
+            output_base = Path(output_dir) / file.stem if output_dir else file.parent / file.stem
+            # Check if any output format already exists
+            needs_processing = True
+            if skip_existing:
+                for fmt in (output_formats or DEFAULT_FORMATS).split(','):
+                    if Path(f"{output_base}.{fmt}").exists():
+                        needs_processing = False
+                        break
+            
+            if needs_processing:
+                files_to_process.append(file)
+            else:
+                skipped_files.append(file)
+        
+        # Process files in parallel
+        results = []
+        failed = []
+        workers = max_workers or MAX_WORKERS
+        
+        # Create progress tracking
+        logger.info(f"Processing {len(files_to_process)} files with {workers} workers")
+        
+        # Process files using asyncio gather for true async
+        tasks = []
+        for file in files_to_process:
+            task = transcribe_file(
+                file_path=str(file),
+                output_formats=output_formats,
+                output_dir=output_dir
+            )
+            tasks.append(task)
+        
+        # Limit concurrent tasks
+        import asyncio
+        semaphore = asyncio.Semaphore(workers)
+        
+        async def process_with_semaphore(task):
+            async with semaphore:
+                try:
+                    return await task
+                except Exception as e:
+                    return {"error": str(e)}
+        
+        # Process all tasks
+        task_results = await asyncio.gather(
+            *[process_with_semaphore(task) for task in tasks]
+        )
+        
+        # Collect results
+        for file, result in zip(files_to_process, task_results):
+            if "error" in result:
+                failed.append({"file": str(file), "error": result["error"]})
+            else:
+                results.append({"file": str(file), **result})
+        
+        # Generate performance report
+        total_duration = sum(r.get("duration", 0) for r in results)
+        total_processing = sum(r.get("processing_time", 0) for r in results)
+        
+        performance_summary = {
+            "total_audio_duration": total_duration,
+            "total_processing_time": total_processing,
+            "average_speed": total_duration / total_processing if total_processing > 0 else 0,
+            "files_per_minute": len(results) / (total_processing / 60) if total_processing > 0 else 0
+        }
+        
+        return {
+            "total_files": len(media_files),
+            "processed": len(results),
+            "skipped": len(skipped_files),
+            "failed": len(failed),
+            "results": results,
+            "failed_files": failed,
+            "performance_report": performance_summary
+        }
+        
+    except Exception as e:
+        logger.error(f"Batch transcription failed: {str(e)}", exc_info=True)
+        raise TranscriptionError(f"Batch transcription failed: {str(e)}")
+```
+
+# Test Strategy:
+- Test with directory containing mixed media files
+- Test pattern matching (*.mp4, audio_*.m4a)
+- Test recursive directory search
+- Test skip_existing functionality
+- Test parallel processing with different worker counts
+- Test error handling for failed files
+- Verify performance metrics are accurate

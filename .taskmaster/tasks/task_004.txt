@@ -1,0 +1,60 @@
+# Task ID: 4
+# Title: Integrate existing WhisperTranscriber with FastMCP context
+# Status: pending
+# Dependencies: 3
+# Priority: high
+# Description: Integrate the existing Python WhisperTranscriber implementation with FastMCP server
+# Details:
+Configure the existing WhisperTranscriber class to work within the FastMCP context:
+
+1. No porting needed - use existing Python implementation as-is
+   - The transcribe_mlx.py file already contains a complete WhisperTranscriber class
+   - The whisper_utils.py contains all supporting utilities
+   - Both files will be copied to the project and imported directly
+
+2. Create singleton instance management:
+   ```python
+   # In whisper_mcp_server.py
+   transcriber_instance = None
+   
+   def get_transcriber(model_name: str = None) -> WhisperTranscriber:
+       global transcriber_instance
+       model = model_name or DEFAULT_MODEL
+       
+       # Only recreate if model changes
+       if transcriber_instance is None or transcriber_instance.model_name != model:
+           transcriber_instance = WhisperTranscriber(
+               model_name=model,
+               output_formats=DEFAULT_FORMATS
+           )
+       return transcriber_instance
+   ```
+
+3. Add configuration via environment variables:
+   - DEFAULT_MODEL: Default MLX Whisper model to use
+   - OUTPUT_FORMATS: Comma-separated list of output formats
+   - TEMP_DIR: Directory for temporary audio files
+   - MAX_WORKERS: Number of parallel workers for batch processing
+
+4. Ensure proper resource cleanup:
+   ```python
+   @mcp.on_shutdown
+   async def cleanup():
+       """Clean up resources on server shutdown"""
+       if transcriber_instance:
+           # Clean up any temporary files
+           cleanup_temp_files(TEMP_DIR)
+       logger.info("Server shutdown complete")
+   ```
+
+5. Model caching strategy:
+   - MLX models are cached by default in ~/.cache/huggingface/
+   - No additional caching needed - MLX handles this automatically
+   - Model switching will automatically download new models if needed
+
+# Test Strategy:
+- Test that existing WhisperTranscriber class works unchanged
+- Verify singleton pattern prevents multiple model loads
+- Test model switching creates new instance
+- Verify temporary file cleanup on shutdown
+- Test all output formats work correctly

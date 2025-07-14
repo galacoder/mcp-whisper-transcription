@@ -1,0 +1,56 @@
+# Task ID: 2
+# Title: Set up Python project structure with FastMCP dependencies
+# Status: in-progress
+# Dependencies: None
+# Priority: high
+# Description: Set up the Python project structure with FastMCP dependencies and existing whisper transcription code
+# Details:
+Create the foundational Python project structure including:
+
+1. Create pyproject.toml with Poetry configuration:
+   - Project name: mcp-whisper-transcription
+   - Python version: ^3.9
+   - Dependencies:
+     * fastmcp>=2.0.0
+     * mlx-whisper>=0.4.2
+     * ffmpeg-python>=0.2.0
+     * tqdm>=4.66.0
+     * psutil>=5.9.0
+     * humanize>=4.8.0
+   - Dev dependencies: pytest, black, isort
+
+2. Copy existing implementation files:
+   - transcribe_mlx.py from /Users/sangle/Dev/action/projects/@ai/whisper-transcription
+   - whisper_utils.py from /Users/sangle/Dev/action/projects/@ai/whisper-transcription
+   - Preserve all existing functionality
+
+3. Create directory structure:
+   - src/
+     * __init__.py
+     * whisper_mcp_server.py (main MCP server file)
+   - tests/
+     * __init__.py
+     * test_transcription.py
+   - examples/
+     * example_audio.m4a
+     * usage_example.py
+
+4. Create configuration files:
+   - .env.example with:
+     * DEFAULT_MODEL=mlx-community/whisper-large-v3-mlx
+     * OUTPUT_FORMATS=txt,md,srt
+     * MAX_WORKERS=4
+     * TEMP_DIR=./temp
+   - .gitignore (Python-specific)
+   - README.md (initial structure)
+
+5. Initialize Poetry environment:
+   - Run poetry init and configure
+   - Run poetry install to create lock file
+   - Verify all dependencies are installed
+
+# Test Strategy:
+- Verify Poetry environment activates correctly
+- Test import of all dependencies
+- Ensure existing transcribe_mlx.py and whisper_utils.py work in new environment
+- Run a simple transcription test to verify MLX Whisper loads
