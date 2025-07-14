@@ -927,29 +927,6 @@ class WhisperTranscriber:
 
         return result.strip()
 
-    # Remove duplicate or near-duplicate lines, even if blank lines separate them
-    deduped_lines = []
-    last_content_key = None  # content of last non-empty line (cleaned, lowercase)
-    for line in lines:
-        stripped = line.strip()
-
-        # Always allow a single blank line but do not reset duplicate tracking
-        if not stripped:
-            deduped_lines.append(line)
-            continue
-
-        # Build a comparison key that ignores timestamp prefixes like "[0.0s - 1.0s]:"
-        if stripped.startswith("[") and "]:" in stripped:
-            key = stripped[stripped.find("]: ") + 3 :].lower()
-        else:
-            key = stripped.lower()
-
-        # Skip if this line is identical to or highly similar to the last non-empty line
-        if last_content_key and (key == last_content_key or similar_text(key, last_content_key) > 0.8):
-            continue
-
-        return result.strip()
-
 
 def similar_text(a: str, b: str) -> float:
     """Calculate similarity between two strings (0-1 scale)"""

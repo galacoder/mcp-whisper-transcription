@@ -863,7 +863,7 @@ def similar_text(a: str, b: str) -> float:
     intersection = len(a_words.intersection(b_words))
     union = len(a_words.union(b_words))
 
-        return intersection / union if union > 0 else 0.0
+    return intersection / union if union > 0 else 0.0
 
 
 def dedup_lines(lines: list[str]) -> list[str]:
@@ -929,27 +929,6 @@ def post_process_transcript(text: str) -> str:
 
     # Deduplicate lines using shared helper
     deduped_lines = dedup_lines(lines)
-    prev_line = None
-
-        # Skip if this line is identical or very similar to the previous
-        if prev_line and line.strip() == prev_line.strip():
-            continue
-
-        # Compare content after timestamps to catch near-duplicates
-        if prev_line and ":" in prev_line and ":" in line:
-            prev_content = prev_line[prev_line.find(":") + 1 :].strip().lower()
-            current_content = line[line.find(":") + 1 :].strip().lower()
-
-            # Skip if content is nearly identical (allowing for minor differences)
-            if (
-                prev_content
-                and current_content
-                and similar_text(prev_content, current_content) > 0.8
-            ):
-                continue
-
-        deduped_lines.append(line)
-        prev_line = line
 
     # Combine lines and ensure reasonable spacing
     result = "\n".join(deduped_lines)
