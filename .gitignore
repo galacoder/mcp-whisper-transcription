@@ -62,7 +62,7 @@ Thumbs.db
 *~
 
 # Task Master local files
-.taskmaster/
+# .taskmaster/  # Commented out - we want to include taskmaster files in this project
 
 # Added by Task Master AI
 # Logs
