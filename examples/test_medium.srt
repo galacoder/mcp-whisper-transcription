@@ -1,0 +1,12 @@
+1
+00:00:00,000 --> 00:00:04,000
+This is a medium-length test audio file. It contains multiple sentences to test the
+
+2
+00:00:04,000 --> 00:00:07,000
+whisper transcription accuracy. The transcription should handle punctuation
+
+3
+00:00:07,000 --> 00:00:11,000
+and capitalization correctly. This audio file is approximately 30 seconds long.
+

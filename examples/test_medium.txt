@@ -1,0 +1,5 @@
+Transcription completed at: 2025-07-14 18:24:12
+
+[0.00s - 4.36s]: This is a medium-length test audio file. It contains multiple sentences to test the
+[4.36s - 8.10s]: whisper transcription accuracy. The transcription should handle punctuation
+[8.10s - 12.64s]: and capitalization correctly. This audio file is approximately 30 seconds long.
