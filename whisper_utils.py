@@ -35,9 +35,25 @@ class PerformanceReport:
     def __init__(self):
         self.stats: List[TranscriptionStats] = []
         self.start_time = datetime.now()
+        self.total_files = 0
+        self.total_duration = 0.0
+        self.total_processing_time = 0.0
+        self.average_speed = 0.0
 
     def add_stats(self, stat: TranscriptionStats):
         self.stats.append(stat)
+    
+    def add_file(self, duration: float, processing_time: float):
+        """Add file statistics for tracking performance"""
+        self.total_files += 1
+        self.total_duration += duration
+        self.total_processing_time += processing_time
+        
+        # Update average speed
+        if self.total_processing_time > 0:
+            self.average_speed = self.total_duration / self.total_processing_time
+        else:
+            self.average_speed = 0.0
 
     def generate_report(self) -> str:
         if not self.stats:

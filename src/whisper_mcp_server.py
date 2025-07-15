@@ -401,10 +401,9 @@ async def batch_transcribe(
         raise TranscriptionError(f"Batch transcription failed: {str(e)}")
 
 
-# Support Tools
-@mcp.tool
-def list_models() -> dict:
-    """List all available MLX Whisper models with details."""
+# Internal functions (not decorated)
+def _list_models_internal() -> dict:
+    """Internal function to list all available MLX Whisper models with details."""
     models = [
         {
             "id": "mlx-community/whisper-tiny-mlx",
@@ -456,6 +455,12 @@ def list_models() -> dict:
         "current_model": current,
         "cache_dir": str(Path.home() / ".cache" / "huggingface"),
     }
+
+# Support Tools
+@mcp.tool
+def list_models() -> dict:
+    """List all available MLX Whisper models with details."""
+    return _list_models_internal()
 
 
 @mcp.tool
@@ -785,9 +790,8 @@ def validate_media_file(file_path: str) -> dict:
         }
 
 
-@mcp.tool
-def get_supported_formats() -> dict:
-    """Get lists of supported input and output formats."""
+def _get_supported_formats_internal() -> dict:
+    """Internal function to get lists of supported input and output formats."""
     return {
         "input_formats": {
             "audio": {
@@ -817,6 +821,12 @@ def get_supported_formats() -> dict:
             "quality": "All formats are supported equally - quality depends on the source audio",
         },
     }
+
+
+@mcp.tool
+def get_supported_formats() -> dict:
+    """Get lists of supported input and output formats."""
+    return _get_supported_formats_internal()
 
 
 # History Management
@@ -892,7 +902,7 @@ async def get_transcription_details(transcription_id: str) -> dict:
 @mcp.resource("transcription://models")
 def get_models_resource() -> dict:
     """Resource endpoint for available models."""
-    return list_models()
+    return _list_models_internal()
 
 
 @mcp.resource("transcription://config")
@@ -910,7 +920,7 @@ def get_config_resource() -> dict:
 @mcp.resource("transcription://formats")
 def get_formats_resource() -> dict:
     """Resource for supported formats."""
-    return get_supported_formats()
+    return _get_supported_formats_internal()
 
 
 @mcp.resource("transcription://performance")
