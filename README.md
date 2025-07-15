@@ -13,6 +13,8 @@ An MCP (Model Context Protocol) server for audio/video transcription using MLX-o
 - 🎛️ **Flexible Models**: Choose from 6 different Whisper models (tiny to large-v3-turbo)
 - 🛠️ **Error Handling**: Robust error handling and validation
 - 📈 **Concurrent Processing**: Thread-safe concurrent transcription support
+- 🔇 **Voice Activity Detection**: Optional VAD to remove silence and speed up processing
+- 🧹 **Hallucination Prevention**: Advanced filtering to remove common transcription artifacts
 
 ## 🏆 Performance
 
@@ -153,6 +155,13 @@ result = await client.call_tool("transcribe_file", {
     "file_path": "interview.mp4",
     "output_formats": "txt,srt",
     "model": "mlx-community/whisper-large-v3-turbo"
+})
+
+# Transcription with Voice Activity Detection
+result = await client.call_tool("transcribe_file", {
+    "file_path": "long_interview.mp4",
+    "output_formats": "txt,srt",
+    "use_vad": True  # Remove silence for faster processing
 })
 
 # Batch processing

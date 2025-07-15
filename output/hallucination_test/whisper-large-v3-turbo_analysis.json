@@ -1,0 +1,31 @@
+{
+  "model": "whisper-large-v3-turbo",
+  "timestamp": "2025-07-14T21:11:10.331424",
+  "total_segments": 18,
+  "word_repetitions": [
+    {
+      "segment": 4,
+      "time": 374.54,
+      "word": "i",
+      "count": 3,
+      "text": "unfortunately you you have really been with the te..."
+    },
+    {
+      "segment": 4,
+      "time": 374.54,
+      "word": "you",
+      "count": 3,
+      "text": "unfortunately you you have really been with the te..."
+    },
+    {
+      "segment": 4,
+      "time": 374.54,
+      "word": "blah",
+      "count": 3,
+      "text": "unfortunately you you have really been with the te..."
+    }
+  ],
+  "repetitive_segments": [],
+  "hallucination_zones": [],
+  "quality_score": 85
+}

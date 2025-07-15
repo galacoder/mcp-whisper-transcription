@@ -37,6 +37,16 @@ from whisper_utils import (
     setup_logger,
     get_video_duration,
 )
+from whisper_config import WhisperConfig
+from hallucination_filter import post_process_transcription
+
+# Import VAD processor
+try:
+    from vad_processor import VADProcessor, apply_vad_to_audio
+    VAD_AVAILABLE = True
+except ImportError:
+    VAD_AVAILABLE = False
+    print("Warning: VAD processor not available. Install torch and torchaudio for VAD support.")
 
 # Try various import patterns for mlx-whisper
 try:
@@ -79,7 +89,7 @@ except ImportError:
 
 
 class WhisperTranscriber:
-    def __init__(self, model_name="mlx-community/whisper-large-v3-mlx", output_formats=None):
+    def __init__(self, model_name="mlx-community/whisper-large-v3-mlx", output_formats=None, use_vad=False):
         """Initialize with MLX optimized model"""
         self.base_dir = Path(__file__).parent
         self.raw_files_dir = self.base_dir / "raw_files"
@@ -109,6 +119,14 @@ class WhisperTranscriber:
 
         # Create performance report
         self.performance_report = PerformanceReport()
+        
+        # VAD settings
+        self.use_vad = use_vad and VAD_AVAILABLE
+        if self.use_vad:
+            self.logger.info("Voice Activity Detection (VAD) enabled")
+            self.vad_processor = VADProcessor()
+        elif use_vad and not VAD_AVAILABLE:
+            self.logger.warning("VAD requested but not available. Install torch and torchaudio.")
 
         # Log successful initialization
         self.logger.info("WhisperTranscriber initialized successfully")
@@ -147,6 +165,23 @@ class WhisperTranscriber:
                 main_pbar.update(10)
                 main_pbar.set_description("Processing audio")
                 self.logger.info(f"Processing audio file: {audio_path}")
+                
+                # Get audio duration to determine optimal config
+                try:
+                    audio_duration = get_video_duration(str(audio_path))
+                    self.logger.info(f"Audio duration: {audio_duration:.1f} seconds")
+                except:
+                    audio_duration = 0  # Default to 0 if can't determine
+                
+                # Get optimal configuration based on audio duration
+                config = WhisperConfig.get_config_for_duration(audio_duration)
+                
+                # Log configuration being used
+                if audio_duration > 300:  # Long audio
+                    self.logger.info("Using LONG_AUDIO_CONFIG to prevent hallucinations")
+                    print("📊 Using optimized settings for long audio (>5 minutes)")
+                else:
+                    self.logger.info("Using SHORT_AUDIO_CONFIG")
 
                 # Use MLX Whisper for transcription
                 start_time = time.time()
@@ -155,10 +190,14 @@ class WhisperTranscriber:
                     path_or_hf_repo=self.model_name,
                     language="en",  # Explicitly set language
                     task="transcribe",  # Specify task
-                    temperature=0.0,  # Reduce randomness
-                    no_speech_threshold=0.45,  # Adjusted silence detection (less strict)
-                    condition_on_previous_text=True,  # Better context handling
-                    initial_prompt="The following is a high-quality transcript. Mark silence and pauses appropriately.",  # Help set expectations
+                    temperature=config["temperature"],
+                    no_speech_threshold=config["no_speech_threshold"],
+                    logprob_threshold=config.get("logprob_threshold", -1.0),
+                    condition_on_previous_text=config["condition_on_previous_text"],
+                    compression_ratio_threshold=config.get("compression_ratio_threshold", 2.4),
+                    initial_prompt=config.get("initial_prompt"),
+                    suppress_blank=config.get("suppress_blank", True),
+                    suppress_tokens=config.get("suppress_tokens", "-1"),
                 )
                 processing_time = time.time() - start_time
                 self.logger.info(f"Transcription completed in {processing_time:.2f} seconds")
@@ -169,6 +208,24 @@ class WhisperTranscriber:
                         "text": result,
                         "segments": [],  # Initialize empty segments
                     }
+                
+                # Correct timestamps if VAD was used
+                if hasattr(self, 'vad_mappings') and self.vad_mappings and result.get("segments"):
+                    self.logger.info("Correcting timestamps for VAD-processed audio...")
+                    result = self._correct_vad_timestamps(result)
+                
+                # Apply post-processing filters to remove hallucinations
+                main_pbar.update(80)
+                main_pbar.set_description("Filtering hallucinations")
+                self.logger.info("Applying hallucination filters...")
+                
+                original_segment_count = len(result.get("segments", []))
+                result = post_process_transcription(result)
+                filtered_segment_count = len(result.get("segments", []))
+                
+                if original_segment_count > filtered_segment_count:
+                    self.logger.info(f"Filtered {original_segment_count - filtered_segment_count} hallucinated segments")
+                    print(f"🔍 Filtered {original_segment_count - filtered_segment_count} potential hallucinations")
 
                 main_pbar.update(90)
                 text_pbar.set_description(f"🎯 Transcription completed")
@@ -344,6 +401,39 @@ class WhisperTranscriber:
             if not extract_audio(file_path, audio_path, self.logger):
                 self.logger.error(f"Audio extraction failed for {file_path}")
                 return False
+            
+            # Apply VAD if enabled
+            if self.use_vad:
+                vad_audio_path = temp_dir / f"{file_path.stem}_vad.wav"
+                self.logger.info("Applying Voice Activity Detection...")
+                print("🎯 Applying VAD to remove silence...")
+                
+                vad_result = apply_vad_to_audio(
+                    str(audio_path),
+                    str(vad_audio_path),
+                    threshold=0.5,
+                    min_speech_duration=0.25,
+                    min_silence_duration=0.5,
+                    merge_chunks=True,
+                    max_chunk_duration=30.0
+                )
+                
+                if vad_result and vad_audio_path.exists():
+                    stats = vad_result['stats']
+                    reduction = vad_result['reduction_ratio']
+                    self.logger.info(f"VAD: Reduced audio by {reduction:.1%} ({stats['speech_duration']:.1f}s of {stats['total_duration']:.1f}s)")
+                    print(f"✅ VAD removed {reduction:.1%} silence ({stats['num_segments']} voice segments found)")
+                    
+                    # Store VAD mappings for timestamp correction
+                    self.vad_mappings = vad_result.get('mappings', [])
+                    
+                    # Use VAD-processed audio
+                    audio_path = vad_audio_path
+                else:
+                    self.logger.warning("VAD processing failed, using original audio")
+                    self.vad_mappings = []
+            else:
+                self.vad_mappings = []
 
             # Split into chunks if longer than 20 minutes
             chunks = self.split_audio_into_chunks(audio_path)
@@ -478,6 +568,35 @@ class WhisperTranscriber:
                 transcript_path.unlink()
                 self.logger.info(f"Removed existing transcript: {transcript_path}")
 
+    def _correct_vad_timestamps(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Correct timestamps in segments to match original audio timing."""
+        if not self.vad_mappings or not result.get("segments"):
+            return result
+            
+        corrected_segments = []
+        for segment in result["segments"]:
+            # Get original timestamps
+            start = segment.get("start", 0)
+            end = segment.get("end", 0)
+            
+            # Map continuous time back to original time
+            if hasattr(self.vad_processor, 'map_continuous_to_original_time'):
+                orig_start = self.vad_processor.map_continuous_to_original_time(start, self.vad_mappings)
+                orig_end = self.vad_processor.map_continuous_to_original_time(end, self.vad_mappings)
+            else:
+                # Fallback: simple linear mapping
+                orig_start = start
+                orig_end = end
+                
+            # Update segment with corrected timestamps
+            corrected_segment = segment.copy()
+            corrected_segment["start"] = orig_start
+            corrected_segment["end"] = orig_end
+            corrected_segments.append(corrected_segment)
+            
+        result["segments"] = corrected_segments
+        return result
+    
     def split_audio_into_chunks(self, audio_path: Path, chunk_duration: int = 1200) -> list[Path]:
         """Split audio into 20-minute chunks (1200 seconds)"""
         try:
@@ -942,6 +1061,11 @@ def main():
         default="txt,md,srt",
         help="Comma-separated list of output formats (txt,md,srt,json)",
     )
+    parser.add_argument(
+        "--vad",
+        action="store_true",
+        help="Enable Voice Activity Detection to remove silence",
+    )
 
     args = parser.parse_args()
 
@@ -952,7 +1076,7 @@ def main():
         logger.addHandler(logging.StreamHandler())
         logger.info(f"Starting MLX Whisper Transcriber")
 
-        transcriber = WhisperTranscriber(model_name=args.model, output_formats=args.output_formats)
+        transcriber = WhisperTranscriber(model_name=args.model, output_formats=args.output_formats, use_vad=args.vad)
 
         if args.force:
             logger.info("Forcing reprocessing of all transcripts")

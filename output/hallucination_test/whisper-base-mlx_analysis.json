@@ -1,0 +1,17 @@
+{
+  "model": "whisper-base-mlx",
+  "timestamp": "2025-07-14T21:11:18.989073",
+  "total_segments": 14,
+  "word_repetitions": [
+    {
+      "segment": 10,
+      "time": 1193.12,
+      "word": "i,",
+      "count": 3,
+      "text": "I really do it.  But yeah, it's intended.  Gary, I..."
+    }
+  ],
+  "repetitive_segments": [],
+  "hallucination_zones": [],
+  "quality_score": 95
+}

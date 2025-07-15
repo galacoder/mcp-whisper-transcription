@@ -42,6 +42,7 @@ Transcribe a single audio or video file using MLX-optimized Whisper models.
 | `temperature` | float | ❌ | 0.0 | Sampling temperature (0.0-1.0) |
 | `no_speech_threshold` | float | ❌ | 0.45 | Silence detection threshold |
 | `initial_prompt` | string | ❌ | null | Optional prompt to guide transcription |
+| `use_vad` | boolean | ❌ | false | Enable Voice Activity Detection to remove silence |
 
 #### Example Request
 

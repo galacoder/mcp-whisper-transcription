@@ -312,6 +312,44 @@ for item in languages:
     print("---")
 ```
 
+### Voice Activity Detection (VAD)
+
+```python
+# Enable VAD for long audio with lots of silence
+result = await client.call_tool("transcribe_file", {
+    "file_path": "/Users/john/Documents/long_interview_with_pauses.mp4",
+    "model": "mlx-community/whisper-large-v3-turbo",
+    "output_formats": "txt,srt",
+    "use_vad": True  # Enable VAD to remove silence
+})
+
+print(f"Processing time with VAD: {result['processing_time']:.1f}s")
+print(f"Audio duration: {result['duration']:.1f}s")
+print(f"Speed: {result['duration']/result['processing_time']:.1f}x realtime")
+
+# VAD is especially useful for:
+# - Interviews with long pauses
+# - Recorded meetings with silence
+# - Audio with music interludes
+# - Phone call recordings
+# - Any audio with >20% silence
+
+# Compare with and without VAD
+vad_comparison = {
+    "without_vad": await client.call_tool("transcribe_file", {
+        "file_path": "/Users/john/Documents/interview.mp4",
+        "use_vad": False
+    }),
+    "with_vad": await client.call_tool("transcribe_file", {
+        "file_path": "/Users/john/Documents/interview.mp4",
+        "use_vad": True
+    })
+}
+
+speedup = vad_comparison["without_vad"]["processing_time"] / vad_comparison["with_vad"]["processing_time"]
+print(f"VAD speedup: {speedup:.2f}x faster")
+```
+
 ## 📊 Integration Examples
 
 ### Using Resources for Monitoring

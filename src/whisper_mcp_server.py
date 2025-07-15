@@ -47,6 +47,9 @@ from whisper_utils import (
     extract_audio,
     get_video_duration,
 )
+sys.path.append(str(Path(__file__).parent.parent))
+from whisper_config import WhisperConfig
+from hallucination_filter import post_process_transcription
 
 # Global instances
 logger = setup_logger(Path("logs"), "WhisperMCP")
@@ -66,14 +69,23 @@ Path("logs").mkdir(exist_ok=True)
 
 
 # Lazy Transcriber Initialization
-def get_transcriber(model_name: str = None) -> WhisperTranscriber:
+def get_transcriber(model_name: str = None, use_vad: bool = False) -> WhisperTranscriber:
     """Get or create WhisperTranscriber instance with lazy loading"""
     global transcriber
     model = model_name or DEFAULT_MODEL
 
-    if transcriber is None or transcriber.model_name != model:
-        logger.info(f"Initializing transcriber with model: {model}")
-        transcriber = WhisperTranscriber(model_name=model, output_formats=DEFAULT_FORMATS)
+    # Check if we need to reinitialize due to VAD setting change
+    reinit_needed = (transcriber is None or 
+                    transcriber.model_name != model or
+                    getattr(transcriber, 'use_vad', False) != use_vad)
+    
+    if reinit_needed:
+        logger.info(f"Initializing transcriber with model: {model}, VAD: {use_vad}")
+        transcriber = WhisperTranscriber(
+            model_name=model, 
+            output_formats=DEFAULT_FORMATS,
+            use_vad=use_vad
+        )
     return transcriber
 
 
@@ -100,6 +112,7 @@ async def _transcribe_file_internal(
     temperature: float = 0.0,
     no_speech_threshold: float = 0.45,
     initial_prompt: str = None,
+    use_vad: bool = False,
 ) -> dict:
     """
     Transcribe a single audio/video file using MLX Whisper.
@@ -131,7 +144,7 @@ async def _transcribe_file_internal(
             raise TranscriptionError(f"File not found: {file_path}")
 
         # Get transcriber instance
-        transcriber = get_transcriber(model)
+        transcriber = get_transcriber(model, use_vad)
 
         # Set output directory
         output_path = Path(output_dir) if output_dir else input_path.parent
@@ -225,6 +238,7 @@ async def transcribe_file(
     temperature: float = 0.0,
     no_speech_threshold: float = 0.45,
     initial_prompt: str = None,
+    use_vad: bool = False,
 ) -> dict:
     """
     Transcribe a single audio/video file using MLX Whisper.
@@ -239,7 +253,7 @@ async def transcribe_file(
         temperature: Sampling temperature (0.0 = deterministic)
         no_speech_threshold: Silence detection threshold
         initial_prompt: Optional prompt to guide transcription style
-
+        use_vad: Enable Voice Activity Detection to remove silence
     Returns:
         dict with:
         - text: Full transcription text
@@ -259,6 +273,7 @@ async def transcribe_file(
         temperature=temperature,
         no_speech_threshold=no_speech_threshold,
         initial_prompt=initial_prompt,
+        use_vad=use_vad,
     )
 
 
