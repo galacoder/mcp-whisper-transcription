@@ -1,0 +1,25 @@
+[
+  {
+    "id": "a1055204-d013-4f4a-a93f-b8fe951e11c6",
+    "file_path": "/Users/sangle/Dev/action/projects/mcp-servers/tools/mcp-whisper-transcription/examples/test_short.wav",
+    "status": "running",
+    "created_at": "2025-07-14T22:15:56.607510",
+    "started_at": "2025-07-14T22:15:56.608487",
+    "completed_at": null,
+    "error": null,
+    "result": null,
+    "options": {
+      "model": "mlx-community/whisper-tiny-mlx",
+      "output_formats": "txt",
+      "language": "en",
+      "task": "transcribe",
+      "output_dir": null,
+      "temperature": 0.0,
+      "no_speech_threshold": 0.45,
+      "initial_prompt": null,
+      "use_vad": false
+    },
+    "progress": 0.0,
+    "estimated_duration": 3.735782
+  }
+]

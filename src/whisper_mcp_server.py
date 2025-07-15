@@ -25,10 +25,20 @@ mcp = FastMCP(
     This MCP server provides audio/video transcription using MLX-optimized Whisper models.
     Optimized for Apple Silicon devices with ultra-fast performance.
     
+    Key Features:
+    - Automatic smart routing: Files >5min processed asynchronously
+    - Voice Activity Detection (VAD) for faster processing
+    - Hallucination prevention filters
+    - Job queue for long-running transcriptions
+    
     Available tools:
-    - transcribe_file: Transcribe a single file
+    - transcribe_file: Transcribe a single file (sync/async)
     - batch_transcribe: Process multiple files
     - list_models: Show available Whisper models
+    - check_job_status: Check async job status
+    - get_job_result: Get completed job results
+    - list_jobs: List all transcription jobs
+    - cancel_job: Cancel a running job
     
     Supports multiple output formats: txt, md, srt, json
     """,
@@ -50,11 +60,13 @@ from whisper_utils import (
 sys.path.append(str(Path(__file__).parent.parent))
 from whisper_config import WhisperConfig
 from hallucination_filter import post_process_transcription
+from job_manager import JobManager, JobStatus, SmartRouter
 
 # Global instances
 logger = setup_logger(Path("logs"), "WhisperMCP")
 transcriber = None  # Lazy initialization
 performance_report = PerformanceReport()
+job_manager = None  # Lazy initialization
 
 # Configuration Management
 # Configuration from environment
@@ -87,6 +99,43 @@ def get_transcriber(model_name: str = None, use_vad: bool = False) -> WhisperTra
             use_vad=use_vad
         )
     return transcriber
+
+
+# Lazy Job Manager Initialization
+async def get_job_manager() -> JobManager:
+    """Get or create JobManager instance with lazy loading"""
+    global job_manager
+    
+    if job_manager is None:
+        logger.info("Initializing job manager")
+        job_manager = JobManager(
+            jobs_dir=Path("jobs"),
+            max_workers=MAX_WORKERS
+        )
+        
+        # Set transcribe callback
+        def transcribe_sync(file_path: str, options: dict) -> dict:
+            """Synchronous wrapper for transcription"""
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(
+                    _transcribe_file_internal(
+                        file_path=file_path,
+                        **options
+                    )
+                )
+                return result
+            finally:
+                loop.close()
+        
+        job_manager.transcribe_callback = transcribe_sync
+        
+        # Start the job manager
+        await job_manager.start()
+    
+    return job_manager
 
 
 # Error Handling Setup
@@ -239,6 +288,7 @@ async def transcribe_file(
     no_speech_threshold: float = 0.45,
     initial_prompt: str = None,
     use_vad: bool = False,
+    force_async: bool = False,
 ) -> dict:
     """
     Transcribe a single audio/video file using MLX Whisper.
@@ -254,27 +304,92 @@ async def transcribe_file(
         no_speech_threshold: Silence detection threshold
         initial_prompt: Optional prompt to guide transcription style
         use_vad: Enable Voice Activity Detection to remove silence
+        force_async: Force async processing (for testing)
     Returns:
         dict with:
-        - text: Full transcription text
-        - segments: List of timestamped segments
-        - output_files: Paths to generated files
+        - text: Full transcription text (if sync)
+        - job_id: Job ID for async processing (if async)
+        - message: Status message
+        - segments: List of timestamped segments (if sync)
+        - output_files: Paths to generated files (if sync)
         - duration: Audio duration in seconds
-        - processing_time: Time taken to transcribe
+        - processing_time: Time taken to transcribe (if sync)
         - model_used: Name of the model used
     """
-    return await _transcribe_file_internal(
-        file_path=file_path,
-        model=model,
-        output_formats=output_formats,
-        language=language,
-        task=task,
-        output_dir=output_dir,
-        temperature=temperature,
-        no_speech_threshold=no_speech_threshold,
-        initial_prompt=initial_prompt,
-        use_vad=use_vad,
-    )
+    try:
+        # Get file info for routing decision
+        input_path = Path(file_path)
+        if not input_path.exists():
+            return {"error": f"File not found: {file_path}"}
+        
+        # Get duration and file size
+        duration = get_video_duration(input_path)
+        file_size = input_path.stat().st_size
+        
+        # Smart routing decision
+        should_async = force_async or SmartRouter.should_use_async(
+            file_path, duration, file_size
+        )
+        
+        if should_async:
+            # Use async job queue
+            logger.info(f"Using async processing for {file_path} (duration: {duration}s)")
+            
+            # Get job manager
+            jm = await get_job_manager()
+            
+            # Prepare options
+            options = {
+                "model": model,
+                "output_formats": output_formats,
+                "language": language,
+                "task": task,
+                "output_dir": output_dir,
+                "temperature": temperature,
+                "no_speech_threshold": no_speech_threshold,
+                "initial_prompt": initial_prompt,
+                "use_vad": use_vad,
+            }
+            
+            # Create job
+            job_id = jm.create_job(file_path, options, duration)
+            
+            # Estimate processing time
+            model_name = model or DEFAULT_MODEL
+            estimated_time = SmartRouter.estimate_processing_time(duration, model_name)
+            
+            return {
+                "job_id": job_id,
+                "message": "Transcription job created. Use 'check_job_status' to monitor progress.",
+                "estimated_time": estimated_time,
+                "estimated_time_formatted": f"{int(estimated_time // 60)}m {int(estimated_time % 60)}s",
+                "duration": duration,
+                "file": file_path,
+                "async": True
+            }
+        else:
+            # Use synchronous processing
+            logger.info(f"Using sync processing for {file_path} (duration: {duration}s)")
+            
+            result = await _transcribe_file_internal(
+                file_path=file_path,
+                model=model,
+                output_formats=output_formats,
+                language=language,
+                task=task,
+                output_dir=output_dir,
+                temperature=temperature,
+                no_speech_threshold=no_speech_threshold,
+                initial_prompt=initial_prompt,
+                use_vad=use_vad,
+            )
+            
+            result["async"] = False
+            return result
+            
+    except Exception as e:
+        logger.error(f"Transcription failed: {str(e)}", exc_info=True)
+        return {"error": f"Transcription failed: {str(e)}"}
 
 
 @mcp.tool
@@ -842,6 +957,202 @@ def _get_supported_formats_internal() -> dict:
 def get_supported_formats() -> dict:
     """Get lists of supported input and output formats."""
     return _get_supported_formats_internal()
+
+
+@mcp.tool
+async def check_job_status(job_id: str) -> dict:
+    """Check the status of a transcription job.
+    
+    Args:
+        job_id: The job ID returned by transcribe_file
+        
+    Returns:
+        dict with job status, progress, and results if completed
+    """
+    jm = await get_job_manager()
+    job = jm.get_job(job_id)
+    
+    if not job:
+        return {"error": f"Job {job_id} not found"}
+    
+    response = {
+        "job_id": job_id,
+        "status": job.status.value,
+        "created_at": job.created_at.isoformat(),
+        "file": job.file_path,
+        "progress": job.progress
+    }
+    
+    if job.started_at:
+        response["started_at"] = job.started_at.isoformat()
+        
+    if job.status == JobStatus.COMPLETED:
+        response["completed_at"] = job.completed_at.isoformat()
+        response["result"] = job.result
+        # Calculate processing time
+        if job.started_at and job.completed_at:
+            processing_time = (job.completed_at - job.started_at).total_seconds()
+            response["processing_time"] = processing_time
+            
+    elif job.status == JobStatus.FAILED:
+        response["completed_at"] = job.completed_at.isoformat()
+        response["error"] = job.error
+        
+    elif job.status == JobStatus.CANCELLED:
+        response["completed_at"] = job.completed_at.isoformat()
+        response["message"] = "Job was cancelled"
+    
+    return response
+
+
+@mcp.tool
+async def get_job_result(job_id: str) -> dict:
+    """Get the transcription result for a completed job.
+    
+    Args:
+        job_id: The job ID
+        
+    Returns:
+        dict with transcription result or error
+    """
+    jm = await get_job_manager()
+    job = jm.get_job(job_id)
+    
+    if not job:
+        return {"error": f"Job {job_id} not found"}
+    
+    if job.status == JobStatus.COMPLETED:
+        return job.result
+    elif job.status == JobStatus.FAILED:
+        return {"error": f"Job failed: {job.error}"}
+    elif job.status == JobStatus.CANCELLED:
+        return {"error": "Job was cancelled"}
+    else:
+        return {
+            "error": f"Job not completed yet (status: {job.status.value})",
+            "status": job.status.value,
+            "progress": job.progress
+        }
+
+
+@mcp.tool
+async def list_jobs(
+    status: str = None,
+    limit: int = 10
+) -> dict:
+    """List transcription jobs.
+    
+    Args:
+        status: Filter by status (pending, running, completed, failed, cancelled)
+        limit: Maximum number of jobs to return (default: 10)
+        
+    Returns:
+        dict with list of jobs and statistics
+    """
+    jm = await get_job_manager()
+    
+    # Parse status filter
+    status_filter = None
+    if status:
+        try:
+            status_filter = JobStatus(status.lower())
+        except ValueError:
+            return {"error": f"Invalid status: {status}. Valid options: pending, running, completed, failed, cancelled"}
+    
+    # Get jobs
+    jobs = jm.list_jobs(status_filter, limit)
+    
+    # Format jobs for response
+    job_list = []
+    for job in jobs:
+        job_info = {
+            "job_id": job.id,
+            "status": job.status.value,
+            "file": Path(job.file_path).name,
+            "created_at": job.created_at.isoformat(),
+            "progress": job.progress
+        }
+        
+        if job.estimated_duration:
+            job_info["estimated_duration"] = job.estimated_duration
+            
+        if job.status == JobStatus.COMPLETED and job.completed_at:
+            job_info["completed_at"] = job.completed_at.isoformat()
+        elif job.status == JobStatus.FAILED:
+            job_info["error"] = job.error
+            
+        job_list.append(job_info)
+    
+    # Get statistics
+    stats = jm.get_stats()
+    
+    return {
+        "jobs": job_list,
+        "total_returned": len(job_list),
+        "statistics": stats
+    }
+
+
+@mcp.tool
+async def cancel_job(job_id: str) -> dict:
+    """Cancel a pending or running transcription job.
+    
+    Args:
+        job_id: The job ID to cancel
+        
+    Returns:
+        dict with cancellation result
+    """
+    jm = await get_job_manager()
+    
+    success = jm.cancel_job(job_id)
+    
+    if success:
+        return {
+            "job_id": job_id,
+            "message": "Job cancelled successfully",
+            "status": "cancelled"
+        }
+    else:
+        job = jm.get_job(job_id)
+        if not job:
+            return {"error": f"Job {job_id} not found"}
+        else:
+            return {
+                "error": f"Cannot cancel job in status: {job.status.value}",
+                "status": job.status.value
+            }
+
+
+@mcp.tool
+async def clean_old_jobs(days: int = 7) -> dict:
+    """Remove completed/failed jobs older than specified days.
+    
+    Args:
+        days: Number of days to keep (default: 7)
+        
+    Returns:
+        dict with cleanup results
+    """
+    jm = await get_job_manager()
+    
+    # Get stats before cleanup
+    stats_before = jm.get_stats()
+    
+    # Clean old jobs
+    jm.clean_old_jobs(days)
+    
+    # Get stats after cleanup
+    stats_after = jm.get_stats()
+    
+    cleaned = stats_before["total_jobs"] - stats_after["total_jobs"]
+    
+    return {
+        "message": f"Cleaned {cleaned} old jobs",
+        "jobs_removed": cleaned,
+        "cutoff_days": days,
+        "remaining_jobs": stats_after["total_jobs"]
+    }
 
 
 # History Management

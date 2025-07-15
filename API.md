@@ -13,6 +13,11 @@ This document provides comprehensive API documentation for all MCP tools and res
   - [estimate_processing_time](#estimate_processing_time)
   - [validate_media_file](#validate_media_file)
   - [get_supported_formats](#get_supported_formats)
+  - [check_job_status](#check_job_status)
+  - [get_job_result](#get_job_result)
+  - [list_jobs](#list_jobs)
+  - [cancel_job](#cancel_job)
+  - [clean_old_jobs](#clean_old_jobs)
 - [Resources](#-resources)
   - [transcription://history](#transcriptionhistory)
   - [transcription://history/{id}](#transcriptionhistoryid)
@@ -20,6 +25,7 @@ This document provides comprehensive API documentation for all MCP tools and res
   - [transcription://config](#transcriptionconfig)
   - [transcription://formats](#transcriptionformats)
   - [transcription://performance](#transcriptionperformance)
+- [Async Processing](#-async-processing)
 - [Error Handling](#-error-handling)
 - [Rate Limits](#-rate-limits)
 
@@ -43,6 +49,7 @@ Transcribe a single audio or video file using MLX-optimized Whisper models.
 | `no_speech_threshold` | float | ❌ | 0.45 | Silence detection threshold |
 | `initial_prompt` | string | ❌ | null | Optional prompt to guide transcription |
 | `use_vad` | boolean | ❌ | false | Enable Voice Activity Detection to remove silence |
+| `force_async` | boolean | ❌ | false | Force async processing (for testing) |
 
 #### Example Request
 
@@ -58,6 +65,7 @@ result = await client.call_tool("transcribe_file", {
 
 #### Response
 
+**Synchronous Response** (files < 5 minutes):
 ```json
 {
   "text": "Hello, this is a test transcription...",
@@ -75,7 +83,21 @@ result = await client.call_tool("transcribe_file", {
   ],
   "duration": 125.4,
   "processing_time": 31.2,
-  "model_used": "mlx-community/whisper-large-v3-turbo"
+  "model_used": "mlx-community/whisper-large-v3-turbo",
+  "async": false
+}
+```
+
+**Asynchronous Response** (files > 5 minutes):
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "message": "Transcription job created. Use 'check_job_status' to monitor progress.",
+  "estimated_time": 180.5,
+  "estimated_time_formatted": "3m 0s",
+  "duration": 601.2,
+  "file": "/Users/john/Documents/long_meeting.mp4",
+  "async": true
 }
 ```
 
@@ -411,6 +433,189 @@ result = await client.call_tool("get_supported_formats", {})
 }
 ```
 
+---
+
+### check_job_status
+
+Check the status of an asynchronous transcription job.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `job_id` | string | ✅ | - | The job ID returned by transcribe_file |
+
+#### Example Request
+
+```python
+result = await client.call_tool("check_job_status", {
+    "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+})
+```
+
+#### Response
+
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "completed",
+  "created_at": "2024-07-14T10:30:00",
+  "started_at": "2024-07-14T10:30:05",
+  "completed_at": "2024-07-14T10:33:15",
+  "file": "/Users/john/Documents/long_meeting.mp4",
+  "progress": 100.0,
+  "processing_time": 190.5,
+  "result": {
+    "text": "Full transcription text...",
+    "segments": [...],
+    "output_files": [...]
+  }
+}
+```
+
+#### Job Status Values
+
+- `pending`: Job is queued and waiting to start
+- `running`: Job is currently being processed
+- `completed`: Job finished successfully
+- `failed`: Job failed with an error
+- `cancelled`: Job was cancelled by user
+
+---
+
+### get_job_result
+
+Get the transcription result for a completed job.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `job_id` | string | ✅ | - | The job ID |
+
+#### Example Request
+
+```python
+result = await client.call_tool("get_job_result", {
+    "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+})
+```
+
+#### Response
+
+Same as synchronous transcribe_file response when job is completed. Returns error if job is not completed.
+
+---
+
+### list_jobs
+
+List transcription jobs with optional filtering.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `status` | string | ❌ | null | Filter by status |
+| `limit` | integer | ❌ | 10 | Maximum number of jobs to return |
+
+#### Example Request
+
+```python
+result = await client.call_tool("list_jobs", {
+    "status": "completed",
+    "limit": 5
+})
+```
+
+#### Response
+
+```json
+{
+  "jobs": [
+    {
+      "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "status": "completed",
+      "file": "long_meeting.mp4",
+      "created_at": "2024-07-14T10:30:00",
+      "completed_at": "2024-07-14T10:33:15",
+      "progress": 100.0
+    }
+  ],
+  "total_returned": 1,
+  "statistics": {
+    "total_jobs": 25,
+    "pending": 2,
+    "running": 1,
+    "completed": 20,
+    "failed": 1,
+    "cancelled": 1,
+    "queue_size": 2,
+    "workers": 2
+  }
+}
+```
+
+---
+
+### cancel_job
+
+Cancel a pending or running transcription job.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `job_id` | string | ✅ | - | The job ID to cancel |
+
+#### Example Request
+
+```python
+result = await client.call_tool("cancel_job", {
+    "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+})
+```
+
+#### Response
+
+```json
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "message": "Job cancelled successfully",
+  "status": "cancelled"
+}
+```
+
+---
+
+### clean_old_jobs
+
+Remove completed/failed jobs older than specified days.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `days` | integer | ❌ | 7 | Number of days to keep |
+
+#### Example Request
+
+```python
+result = await client.call_tool("clean_old_jobs", {
+    "days": 3
+})
+```
+
+#### Response
+
+```json
+{
+  "message": "Cleaned 15 old jobs",
+  "jobs_removed": 15,
+  "cutoff_days": 3,
+  "remaining_jobs": 10
+}
+```
+
 ## 📊 Resources
 
 ### transcription://history
@@ -503,6 +708,62 @@ Get server performance statistics.
   "uptime": 86400.0
 }
 ```
+
+## 🔄 Async Processing
+
+The server automatically uses asynchronous processing for long audio files to avoid timeout issues in Claude Desktop.
+
+### Smart Routing
+
+Files are automatically routed to sync or async processing based on:
+
+- **Duration**: Files > 5 minutes go to async queue
+- **File Size**: Files > 100MB go to async queue
+- **Manual**: Use `force_async: true` to force async processing
+
+### Async Workflow
+
+1. **Submit File**: Call `transcribe_file` with a long audio file
+2. **Get Job ID**: Receive a job ID immediately (no timeout)
+3. **Check Status**: Use `check_job_status` to monitor progress
+4. **Get Results**: Use `get_job_result` when completed
+
+### Example Async Flow
+
+```python
+# 1. Submit long file (automatic async)
+result = await client.call_tool("transcribe_file", {
+    "file_path": "/path/to/2-hour-meeting.mp4",
+    "model": "mlx-community/whisper-large-v3-turbo"
+})
+# Returns immediately with job_id
+
+# 2. Check status periodically
+status = await client.call_tool("check_job_status", {
+    "job_id": result["job_id"]
+})
+print(f"Status: {status['status']}, Progress: {status['progress']}%")
+
+# 3. Get results when completed
+if status["status"] == "completed":
+    transcript = await client.call_tool("get_job_result", {
+        "job_id": result["job_id"]
+    })
+    print(transcript["text"])
+```
+
+### Job Management
+
+- **List Jobs**: View all jobs with `list_jobs`
+- **Cancel Jobs**: Stop running jobs with `cancel_job`
+- **Clean Up**: Remove old jobs with `clean_old_jobs`
+
+### Performance
+
+- Async jobs run in parallel (default: 2 workers)
+- Jobs persist across server restarts
+- Failed jobs can be retried
+- No timeout limitations
 
 ## ⚠️ Error Handling
 

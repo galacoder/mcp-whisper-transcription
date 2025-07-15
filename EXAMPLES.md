@@ -350,6 +350,180 @@ speedup = vad_comparison["without_vad"]["processing_time"] / vad_comparison["wit
 print(f"VAD speedup: {speedup:.2f}x faster")
 ```
 
+### Async Processing for Long Files
+
+```python
+# Process a 2-hour meeting recording asynchronously
+long_file = "/Users/john/Documents/board_meeting_2hours.mp4"
+
+# 1. Submit for transcription (automatically uses async for long files)
+result = await client.call_tool("transcribe_file", {
+    "file_path": long_file,
+    "model": "mlx-community/whisper-large-v3-turbo",
+    "output_formats": "txt,srt,json",
+    "use_vad": True  # Speed up by removing silence
+})
+
+if result.get("async"):
+    print(f"✅ Job created: {result['job_id']}")
+    print(f"Estimated time: {result['estimated_time_formatted']}")
+    
+    # 2. Monitor progress
+    while True:
+        status = await client.call_tool("check_job_status", {
+            "job_id": result["job_id"]
+        })
+        
+        print(f"Status: {status['status']}, Progress: {status['progress']:.1f}%")
+        
+        if status["status"] in ["completed", "failed", "cancelled"]:
+            break
+            
+        await asyncio.sleep(10)  # Check every 10 seconds
+    
+    # 3. Get results
+    if status["status"] == "completed":
+        transcript = await client.call_tool("get_job_result", {
+            "job_id": result["job_id"]
+        })
+        print(f"✅ Transcription complete!")
+        print(f"Processing time: {transcript['processing_time']/60:.1f} minutes")
+        print(f"Output files: {transcript['output_files']}")
+else:
+    # Short file processed synchronously
+    print("✅ Transcription complete (sync mode)")
+    print(f"Text: {result['text'][:200]}...")
+```
+
+### Managing Multiple Async Jobs
+
+```python
+# Submit multiple long files for processing
+video_files = [
+    "/Users/john/Conferences/day1_morning.mp4",
+    "/Users/john/Conferences/day1_afternoon.mp4",
+    "/Users/john/Conferences/day2_keynote.mp4"
+]
+
+job_ids = []
+
+# 1. Submit all files
+for file in video_files:
+    result = await client.call_tool("transcribe_file", {
+        "file_path": file,
+        "model": "mlx-community/whisper-medium-mlx",  # Balance speed/quality
+        "output_formats": "txt,md",
+        "force_async": True  # Force async even for shorter files
+    })
+    
+    job_ids.append(result["job_id"])
+    print(f"Submitted: {Path(file).name} -> Job {result['job_id'][:8]}...")
+
+# 2. Monitor all jobs
+completed = 0
+while completed < len(job_ids):
+    # Check job statuses
+    jobs = await client.call_tool("list_jobs", {
+        "limit": 20
+    })
+    
+    # Count completed jobs
+    completed = sum(1 for job in jobs["jobs"] 
+                   if job["job_id"] in job_ids 
+                   and job["status"] == "completed")
+    
+    print(f"\n📊 Progress: {completed}/{len(job_ids)} completed")
+    print(f"Queue: {jobs['statistics']['pending']} pending, "
+          f"{jobs['statistics']['running']} running")
+    
+    await asyncio.sleep(30)  # Check every 30 seconds
+
+# 3. Collect all results
+for job_id in job_ids:
+    result = await client.call_tool("get_job_result", {
+        "job_id": job_id
+    })
+    print(f"\n✅ Job {job_id[:8]} complete")
+    print(f"   Files: {result['output_files']}")
+```
+
+### Smart Routing Decision
+
+```python
+# Let the server decide sync vs async based on file characteristics
+files_to_process = [
+    ("short_clip.mp3", "2 minute clip"),
+    ("podcast_episode.mp3", "45 minute episode"),
+    ("conference_recording.mp4", "3 hour conference"),
+    ("huge_audiobook.m4a", "500MB audiobook")
+]
+
+for file_path, description in files_to_process:
+    print(f"\n📄 Processing: {description}")
+    
+    # Estimate first
+    estimate = await client.call_tool("estimate_processing_time", {
+        "file_path": f"/Users/john/Audio/{file_path}"
+    })
+    
+    print(f"Duration: {estimate['duration_formatted']}")
+    print(f"Estimated time: {estimate['estimated_time_formatted']}")
+    
+    # Process with smart routing
+    result = await client.call_tool("transcribe_file", {
+        "file_path": f"/Users/john/Audio/{file_path}",
+        "output_formats": "txt"
+    })
+    
+    if result.get("async"):
+        print(f"→ ASYNC processing (Job: {result['job_id'][:8]}...)")
+        print(f"  Reason: Long duration or large file")
+    else:
+        print(f"→ SYNC processing (immediate result)")
+        print(f"  Processing time: {result['processing_time']:.1f}s")
+```
+
+### Job Queue Management
+
+```python
+# View and manage the job queue
+print("=== Job Queue Status ===")
+
+# 1. Get current queue status
+jobs = await client.call_tool("list_jobs", {"limit": 50})
+stats = jobs["statistics"]
+
+print(f"Total jobs: {stats['total_jobs']}")
+print(f"Pending: {stats['pending']}")
+print(f"Running: {stats['running']}")
+print(f"Completed: {stats['completed']}")
+print(f"Failed: {stats['failed']}")
+
+# 2. List running jobs
+running_jobs = [j for j in jobs["jobs"] if j["status"] == "running"]
+if running_jobs:
+    print("\n🏃 Currently Running:")
+    for job in running_jobs:
+        print(f"- {job['job_id'][:8]}... | {job['file']} | Progress: {job['progress']:.1f}%")
+
+# 3. Cancel a stuck job if needed
+if len(running_jobs) > 0 and running_jobs[0]["progress"] < 10:
+    stuck_job = running_jobs[0]["job_id"]
+    print(f"\n⚠️ Cancelling potentially stuck job: {stuck_job[:8]}...")
+    
+    cancel_result = await client.call_tool("cancel_job", {
+        "job_id": stuck_job
+    })
+    print(cancel_result["message"])
+
+# 4. Clean old completed jobs
+print("\n🧹 Cleaning old jobs...")
+cleanup = await client.call_tool("clean_old_jobs", {
+    "days": 3  # Remove jobs older than 3 days
+})
+print(f"Removed {cleanup['jobs_removed']} old jobs")
+```
+
 ## 📊 Integration Examples
 
 ### Using Resources for Monitoring
