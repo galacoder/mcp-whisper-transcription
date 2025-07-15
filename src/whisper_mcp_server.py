@@ -1272,8 +1272,8 @@ if __name__ == "__main__":
         import ffmpeg  # noqa: F401
     except ImportError as e:
         logger.error(f"Missing dependency: {e}")
-        print(f"Error: {e}")
-        print("Please install all dependencies: poetry install")
+        print(f"Error: {e}", file=sys.stderr)
+        print("Please install all dependencies: poetry install", file=sys.stderr)
         sys.exit(1)
 
     # Run the server

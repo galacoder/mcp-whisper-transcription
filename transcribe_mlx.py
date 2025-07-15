@@ -11,7 +11,7 @@ except ImportError:
     import subprocess
     import sys
 
-    print("Installing ffmpeg-python package...")
+    print("Installing ffmpeg-python package...", file=sys.stderr)
     subprocess.check_call([sys.executable, "-m", "pip", "install", "ffmpeg-python"])
     import ffmpeg
 from tqdm import tqdm
@@ -46,7 +46,7 @@ try:
     VAD_AVAILABLE = True
 except ImportError:
     VAD_AVAILABLE = False
-    print("Warning: VAD processor not available. Install torch and torchaudio for VAD support.")
+    print("Warning: VAD processor not available. Install torch and torchaudio for VAD support.", file=sys.stderr)
 
 # Try various import patterns for mlx-whisper
 try:
@@ -54,14 +54,14 @@ try:
     import mlx_whisper
     from mlx_whisper import transcribe as mlx_whisper_transcribe
 
-    print("Successfully imported mlx_whisper directly")
+    print("Successfully imported mlx_whisper directly", file=sys.stderr)
 except ImportError:
     try:
         # Try alternate import structure
         from mlx_whisper import whisper
         from mlx_whisper.whisper import transcribe as mlx_whisper_transcribe
 
-        print("Successfully imported from mlx_whisper.whisper")
+        print("Successfully imported from mlx_whisper.whisper", file=sys.stderr)
     except ImportError:
         try:
             # Use system path as a last resort
@@ -69,19 +69,19 @@ except ImportError:
             import mlx_whisper
             from mlx_whisper import transcribe as mlx_whisper_transcribe
 
-            print("Successfully imported mlx_whisper from site-packages")
+            print("Successfully imported mlx_whisper from site-packages", file=sys.stderr)
         except ImportError:
             try:
                 # If direct import fails, try to install it
                 import subprocess
 
-                print("Installing mlx-whisper package...")
+                print("Installing mlx-whisper package...", file=sys.stderr)
                 subprocess.check_call([sys.executable, "-m", "pip", "install", "mlx-whisper"])
                 # Try importing again after installation
                 import mlx_whisper
                 from mlx_whisper import transcribe as mlx_whisper_transcribe
 
-                print("Successfully imported mlx_whisper after installing")
+                print("Successfully imported mlx_whisper after installing", file=sys.stderr)
             except ImportError:
                 raise ImportError(
                     "Could not import mlx-whisper. Please install it with 'pip install mlx-whisper'"
@@ -134,18 +134,18 @@ class WhisperTranscriber:
     def load_model(self):
         try:
             self.logger.info(f"Loading MLX Whisper model: {self.model_name}")
-            print(f"\nLoading MLX Whisper model: {self.model_name}")
+            print(f"\nLoading MLX Whisper model: {self.model_name}", file=sys.stderr)
             pbar = tqdm(total=1, desc="Loading Model", position=0)
 
             if not Path(self.model_name).exists():
-                print(f"Using model from HuggingFace: {self.model_name}")
+                print(f"Using model from HuggingFace: {self.model_name}", file=sys.stderr)
 
             pbar.update(1)
             pbar.close()
 
-            print(f"\n✨ Model ready!")
-            print(f"  📚 Model: {self.model_name}")
-            print(f"  🖥️  Device: MLX")
+            print(f"\n✨ Model ready!", file=sys.stderr)
+            print(f"  📚 Model: {self.model_name}", file=sys.stderr)
+            print(f"  🖥️  Device: MLX", file=sys.stderr)
 
             self.logger.info("MLX Whisper model configured successfully")
 
@@ -156,7 +156,7 @@ class WhisperTranscriber:
     def transcribe_audio(self, audio_path: Path, output_path: Path) -> Dict[str, Any]:
         try:
             self.logger.info(f"Starting transcription: {audio_path}")
-            print(f"\nTranscribing: {audio_path.name}")
+            print(f"\nTranscribing: {audio_path.name}", file=sys.stderr)
 
             main_pbar = tqdm(total=100, desc="Overall Progress", position=0, leave=True)
             text_pbar = tqdm(desc="Transcribing", position=1, leave=True, bar_format="{desc}")
@@ -179,7 +179,7 @@ class WhisperTranscriber:
                 # Log configuration being used
                 if audio_duration > 300:  # Long audio
                     self.logger.info("Using LONG_AUDIO_CONFIG to prevent hallucinations")
-                    print("📊 Using optimized settings for long audio (>5 minutes)")
+                    print("📊 Using optimized settings for long audio (>5 minutes)", file=sys.stderr)
                 else:
                     self.logger.info("Using SHORT_AUDIO_CONFIG")
 
@@ -225,7 +225,7 @@ class WhisperTranscriber:
                 
                 if original_segment_count > filtered_segment_count:
                     self.logger.info(f"Filtered {original_segment_count - filtered_segment_count} hallucinated segments")
-                    print(f"🔍 Filtered {original_segment_count - filtered_segment_count} potential hallucinations")
+                    print(f"🔍 Filtered {original_segment_count - filtered_segment_count} potential hallucinations", file=sys.stderr)
 
                 main_pbar.update(90)
                 text_pbar.set_description(f"🎯 Transcription completed")
@@ -238,12 +238,12 @@ class WhisperTranscriber:
                 text_pbar.close()
 
             if result:
-                print("\nSaving transcription files...")
+                print("\nSaving transcription files...", file=sys.stderr)
                 self.logger.info(f"Saving transcription results to {output_path}")
                 # Use the shared formatter to save in requested formats
                 self.formatter.save_transcription(result, output_path)
                 self.logger.info(f"Transcription saved successfully")
-                print(f"\n✨ Transcription completed successfully!")
+                print(f"\n✨ Transcription completed successfully!", file=sys.stderr)
 
             return result
 
@@ -255,7 +255,7 @@ class WhisperTranscriber:
         video_files = self.get_video_files()
         if not video_files:
             msg = "No media files found in the raw_files directory."
-            print(msg)
+            print(msg, file=sys.stderr)
             self.logger.warning(msg)
             return
 
@@ -266,12 +266,12 @@ class WhisperTranscriber:
 
         if not videos_to_process:
             msg = "All files are up to date - no processing needed."
-            print(msg)
+            print(msg, file=sys.stderr)
             self.logger.info(msg)
             return
 
         self.logger.info(f"Found {len(videos_to_process)} files to process")
-        print(f"\nFound {len(videos_to_process)} files to process")
+        print(f"\nFound {len(videos_to_process)} files to process", file=sys.stderr)
 
         temp_dir = self.base_dir / "temp"
         temp_dir.mkdir(exist_ok=True)
@@ -295,7 +295,7 @@ class WhisperTranscriber:
 
             # Generate and print performance report
             report = self.performance_report.generate_report()
-            print(report)
+            print(report, file=sys.stderr)
 
             # Save report to file
             # Create reports directory if it doesn't exist
@@ -393,7 +393,7 @@ class WhisperTranscriber:
             start_time = time.time()
             duration = get_video_duration(file_path, self.logger)
 
-            print(f"\nProcessing: {file_path.name} ({humanize.naturaldelta(duration)})")
+            print(f"\nProcessing: {file_path.name} ({humanize.naturaldelta(duration)})", file=sys.stderr)
             self.logger.info(f"File duration: {duration:.2f} seconds")
 
             # Convert to audio first
@@ -406,7 +406,7 @@ class WhisperTranscriber:
             if self.use_vad:
                 vad_audio_path = temp_dir / f"{file_path.stem}_vad.wav"
                 self.logger.info("Applying Voice Activity Detection...")
-                print("🎯 Applying VAD to remove silence...")
+                print("🎯 Applying VAD to remove silence...", file=sys.stderr)
                 
                 vad_result = apply_vad_to_audio(
                     str(audio_path),
@@ -422,7 +422,7 @@ class WhisperTranscriber:
                     stats = vad_result['stats']
                     reduction = vad_result['reduction_ratio']
                     self.logger.info(f"VAD: Reduced audio by {reduction:.1%} ({stats['speech_duration']:.1f}s of {stats['total_duration']:.1f}s)")
-                    print(f"✅ VAD removed {reduction:.1%} silence ({stats['num_segments']} voice segments found)")
+                    print(f"✅ VAD removed {reduction:.1%} silence ({stats['num_segments']} voice segments found)", file=sys.stderr)
                     
                     # Store VAD mappings for timestamp correction
                     self.vad_mappings = vad_result.get('mappings', [])
@@ -447,7 +447,7 @@ class WhisperTranscriber:
             self.logger.info(f"Processing {total_chunks} chunks for {file_path.name}")
 
             for i, chunk in enumerate(chunks, 1):
-                print(f"\nProcessing chunk {i} of {total_chunks}")
+                print(f"\nProcessing chunk {i} of {total_chunks}", file=sys.stderr)
                 self.logger.info(f"Processing chunk {i} of {total_chunks}: {chunk}")
 
                 chunk_output = temp_dir / f"{file_path.stem}_chunk_{i}"
@@ -509,7 +509,7 @@ class WhisperTranscriber:
             self.logger.info(
                 f"Completed processing {file_path.name} in {processing_time:.2f} seconds"
             )
-            print(f"Completed in {humanize.naturaldelta(processing_time)}")
+            print(f"Completed in {humanize.naturaldelta(processing_time)}", file=sys.stderr)
             return True
 
         except Exception as e:
@@ -615,7 +615,7 @@ class WhisperTranscriber:
 
             total_chunks = math.ceil(duration / chunk_duration)
             self.logger.info(f"Splitting audio into {total_chunks} chunks")
-            print(f"\nSplitting audio into {total_chunks} chunks...")
+            print(f"\nSplitting audio into {total_chunks} chunks...", file=sys.stderr)
 
             for i in range(0, total_chunks):
                 start_time = i * chunk_duration
@@ -1033,14 +1033,14 @@ def list_available_models():
         },
     }
 
-    print("\nAvailable MLX Whisper Models:")
-    print("-" * 60)
+    print("\nAvailable MLX Whisper Models:", file=sys.stderr)
+    print("-" * 60, file=sys.stderr)
     for model_id, info in models.items():
-        print(f"\n{model_id}")
-        print(f"  Size: {info['size']}")
-        print(f"  Description: {info['description']}")
-        print(f"  Speed: {info['speed']}")
-    print("\nUsing mlx-community/whisper-large-v3-turbo for optimal speed")
+        print(f"\n{model_id}", file=sys.stderr)
+        print(f"  Size: {info['size']}", file=sys.stderr)
+        print(f"  Description: {info['description']}", file=sys.stderr)
+        print(f"  Speed: {info['speed']}", file=sys.stderr)
+    print("\nUsing mlx-community/whisper-large-v3-turbo for optimal speed", file=sys.stderr)
 
 
 def main():
