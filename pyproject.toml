@@ -1,11 +1,27 @@
 [tool.poetry]
 name = "mcp-whisper-transcription"
-version = "0.1.0"
-description = "MCP server for audio/video transcription using MLX-optimized Whisper models"
-authors = ["Your Name <your.email@example.com>"]
+version = "1.0.0"
+description = "FastMCP server for audio/video transcription using MLX Whisper models"
+authors = ["Sang Le <dev@sangleml.com>"]
 readme = "README.md"
 license = "MIT"
+repository = "https://github.com/sangleml/mcp-whisper-transcription"
+keywords = ["mcp", "whisper", "transcription", "mlx", "fastmcp", "audio", "video", "speech-to-text"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers", 
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: MacOS",
+]
 packages = [{include = "src"}]
+
+[tool.poetry.scripts]
+mcp-whisper = "src.whisper_mcp_server:main"
 
 [tool.poetry.dependencies]
 python = "^3.10"
