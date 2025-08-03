@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "whisper-transcription": {
+      "command": "poetry",
+      "args": [
+        "run",
+        "python",
+        "-m",
+        "src.whisper_mcp_server"
+      ],
+      "cwd": "/Users/sangle/Dev/action/projects/mcp-servers/tools/mcp-whisper-transcription",
+      "env": {
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONPATH": "/Users/sangle/Dev/action/projects/mcp-servers/tools/mcp-whisper-transcription"
+      }
+    }
+  }
+}
